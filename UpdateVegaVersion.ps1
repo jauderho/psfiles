@@ -8,15 +8,15 @@
 
    AMD stopped providing proper driver updates after 10.4.1 for Hades Canyon systems. This enables the use of the AMD software after manually installing the Vega 64 driver.
 .NOTES
-   Created by Jauder Ho 
+   Created by Jauder Ho
    Last modified 11/1/2020
    https://www.carumba.com
- 
+
    BSD License
 
    Pull requests are welcome.
- 
-.LINK 
+
+.LINK
    https://www.carumba.com
 #>
 
@@ -32,7 +32,7 @@ function Test-Admin {
 if ((Test-Admin) -eq $false) {
     if ($elevated) {
         # tried to elevate, did not work, aborting
-    } 
+    }
     else {
         Start-Process powershell.exe -Verb RunAs -ArgumentList ('-noprofile -noexit -file "{0}" -elevated' -f ($myinvocation.MyCommand.Definition))
     }
@@ -40,7 +40,7 @@ if ((Test-Admin) -eq $false) {
     exit
 }
 
-Write-Host 'Running with full privileges...'
+Write-Output 'Running with full privileges...'
 
 function Update-VegaVersion {
     # For tips on how to manually upgrade AMD driver for Hades Canyon
@@ -52,16 +52,17 @@ function Update-VegaVersion {
     # Get-WindowsDriver -Online -All | select ProviderName, Driver, OriginalFileName, Version | where {$_.ProviderName -like "*Advanced Micro Devices*"}
     # Get-WindowsDriver -Online -All | select ProviderName, Driver, OriginalFileName, Version | where {$_.Driver -like "*oem52.inf*"}
     #
-    $vegadriver = Get-WmiObject Win32_PnPSignedDriver| Select-Object DeviceName, Manufacturer, DriverVersion | Where-Object {$_.DeviceName -like "*Vega*"} | Select-Object DriverVersion
+    #$vegadriver = Get-WmiObject Win32_PnPSignedDriver| Select-Object DeviceName, Manufacturer, DriverVersion | Where-Object {$_.DeviceName -like "*Vega*"} | Select-Object DriverVersion
+    $vegadriver = Get-CimInstance Win32_PnPSignedDriver| Select-Object DeviceName, Manufacturer, DriverVersion | Where-Object {$_.DeviceName -like "*Vega*"} | Select-Object DriverVersion
     $vegaversion = $vegadriver.DriverVersion | Select-Object -First 1
     # $version = "26.20.15029.20013"
 
     # Set the version
     # Get-ItemProperty -Path "HKLM:\SOFTWARE\AMD\CN" -Name "DriverVersion"
     Set-ItemProperty -Path "HKLM:\SOFTWARE\AMD\CN" -Name "DriverVersion" -Type String -Value $vegaversion
-    Write-Host "Version set to" $vegaversion
+    Write-Output "Version set to" $vegaversion
 }
 
 Update-VegaVersion
 
-Write-Host 'Adjustments complete...'
+Write-Output 'Adjustments complete...'
