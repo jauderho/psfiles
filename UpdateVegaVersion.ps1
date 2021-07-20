@@ -1,0 +1,67 @@
+
+<#
+.SYNOPSIS
+   Set the correct AMD driver version
+
+.DESCRIPTION
+   Set the correct AMD driver version manually
+
+   AMD stopped providing proper driver updates after 10.4.1 for Hades Canyon systems. This enables the use of the AMD software after manually installing the Vega 64 driver.
+.NOTES
+   Created by Jauder Ho 
+   Last modified 11/1/2020
+   https://www.carumba.com
+ 
+   BSD License
+
+   Pull requests are welcome.
+ 
+.LINK 
+   https://www.carumba.com
+#>
+
+# Elevate as needed
+# https://superuser.com/questions/108207/how-to-run-a-powershell-script-as-administrator
+param([switch]$Elevated)
+
+function Test-Admin {
+  $currentUser = New-Object Security.Principal.WindowsPrincipal $([Security.Principal.WindowsIdentity]::GetCurrent())
+  $currentUser.IsInRole([Security.Principal.WindowsBuiltinRole]::Administrator)
+}
+
+if ((Test-Admin) -eq $false) {
+    if ($elevated) {
+        # tried to elevate, did not work, aborting
+    } 
+    else {
+        Start-Process powershell.exe -Verb RunAs -ArgumentList ('-noprofile -noexit -file "{0}" -elevated' -f ($myinvocation.MyCommand.Definition))
+    }
+
+    exit
+}
+
+Write-Host 'Running with full privileges...'
+
+function Update-VegaVersion {
+    # For tips on how to manually upgrade AMD driver for Hades Canyon
+    # See https://community.amd.com/message/2994618
+
+    # Get the current version from the driver. Use Device Manager > Display Adapter > Properties > Driver
+    #
+    # Get-WmiObject Win32_PnPSignedDriver| select DeviceName, Manufacturer, DriverVersion | where {$_.DeviceName -like "*Vega*"} | select DriverVersion
+    # Get-WindowsDriver -Online -All | select ProviderName, Driver, OriginalFileName, Version | where {$_.ProviderName -like "*Advanced Micro Devices*"}
+    # Get-WindowsDriver -Online -All | select ProviderName, Driver, OriginalFileName, Version | where {$_.Driver -like "*oem52.inf*"}
+    #
+    $vegadriver = Get-WmiObject Win32_PnPSignedDriver| Select-Object DeviceName, Manufacturer, DriverVersion | Where-Object {$_.DeviceName -like "*Vega*"} | Select-Object DriverVersion
+    $vegaversion = $vegadriver.DriverVersion | Select-Object -First 1
+    # $version = "26.20.15029.20013"
+
+    # Set the version
+    # Get-ItemProperty -Path "HKLM:\SOFTWARE\AMD\CN" -Name "DriverVersion"
+    Set-ItemProperty -Path "HKLM:\SOFTWARE\AMD\CN" -Name "DriverVersion" -Type String -Value $vegaversion
+    Write-Host "Version set to" $vegaversion
+}
+
+Update-VegaVersion
+
+Write-Host 'Adjustments complete...'
