@@ -43,6 +43,12 @@ if ((Test-Admin) -eq $false) {
 Write-Output 'Running with full privileges...'
 
 function Update-VegaVersion {
+
+    [CmdletBinding(
+        SupportsShouldProcess=$true,
+        ConfirmImpact="Low"
+    )]
+
     # For tips on how to manually upgrade AMD driver for Hades Canyon
     # See https://community.amd.com/message/2994618
 
@@ -55,7 +61,7 @@ function Update-VegaVersion {
     #$vegadriver = Get-WmiObject Win32_PnPSignedDriver| Select-Object DeviceName, Manufacturer, DriverVersion | Where-Object {$_.DeviceName -like "*Vega*"} | Select-Object DriverVersion
     $vegadriver = Get-CimInstance Win32_PnPSignedDriver| Select-Object DeviceName, Manufacturer, DriverVersion | Where-Object {$_.DeviceName -like "*Vega*"} | Select-Object DriverVersion
     $vegaversion = $vegadriver.DriverVersion | Select-Object -First 1
-    # $version = "26.20.15029.20013"
+    #$version = "26.20.15029.20013"
 
     # Set the version
     # Get-ItemProperty -Path "HKLM:\SOFTWARE\AMD\CN" -Name "DriverVersion"
