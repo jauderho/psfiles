@@ -43,9 +43,8 @@ if ((Test-Admin) -eq $false) {
 Write-Output 'Running with full privileges...'
 
 function Update-VegaVersion {
-
     [CmdletBinding(
-        SupportsShouldProcess=$true,
+        SupportsShouldProcess,
         ConfirmImpact="Low"
     )]
 
@@ -58,17 +57,17 @@ function Update-VegaVersion {
     # Get-WindowsDriver -Online -All | select ProviderName, Driver, OriginalFileName, Version | where {$_.ProviderName -like "*Advanced Micro Devices*"}
     # Get-WindowsDriver -Online -All | select ProviderName, Driver, OriginalFileName, Version | where {$_.Driver -like "*oem52.inf*"}
     #
-    #$vegadriver = Get-WmiObject Win32_PnPSignedDriver| Select-Object DeviceName, Manufacturer, DriverVersion | Where-Object {$_.DeviceName -like "*Vega*"} | Select-Object DriverVersion
-    $vegadriver = Get-CimInstance Win32_PnPSignedDriver| Select-Object DeviceName, Manufacturer, DriverVersion | Where-Object {$_.DeviceName -like "*Vega*"} | Select-Object DriverVersion
+    #$vegadriver = Get-WmiObject Win32_PnPSignedDriver | Select-Object DeviceName, Manufacturer, DriverVersion | Where-Object {$_.DeviceName -like "*Vega*"} | Select-Object DriverVersion
+    $vegadriver = Get-CimInstance Win32_PnPSignedDriver | Select-Object DeviceName, Manufacturer, DriverVersion | Where-Object {$_.DeviceName -like "*Vega*"} | Select-Object DriverVersion
     $vegaversion = $vegadriver.DriverVersion | Select-Object -First 1
     #$version = "26.20.15029.20013"
 
     # Set the version
     # Get-ItemProperty -Path "HKLM:\SOFTWARE\AMD\CN" -Name "DriverVersion"
-    Set-ItemProperty -Path "HKLM:\SOFTWARE\AMD\CN" -Name "DriverVersion" -Type String -Value $vegaversion
+    Set-ItemProperty -Path "HKLM:\SOFTWARE\AMD\CN" -Name "DriverVersion" -Type String -Value $vegaversion -Confirm:$false
     Write-Output "Version set to" $vegaversion
 }
 
-Update-VegaVersion
+Update-VegaVersion -Confirm:$false
 
 Write-Output 'Adjustments complete...'
