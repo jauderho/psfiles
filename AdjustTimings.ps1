@@ -47,6 +47,9 @@ Write-Output 'Running with full privileges...'
 function Set-NTPTiming {
    # https://support.microsoft.com/en-us/help/816042/how-to-configure-an-authoritative-time-server-in-windows-server
 
+   # Define the list of NTP servers to be used. Adjust as necessary. Try to use at least 4 servers.
+   $ntpservers = "balrog.carumba.org,0x9 time.cloudflare.com,0x9 0.pool.ntp.org,0x9 1.pool.ntp.org,0x9 2.pool.ntp.org,0x9 3.pool.ntp.org,0x9"
+
    # Force clock resync every hour (3600s)
    # VMware recommends a resync every 15 mins for VMs (900s)
    Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\services\W32Time\TimeProviders\NtpClient" -Name "SpecialPollInterval" -Type DWord -Value 900
@@ -61,9 +64,9 @@ function Set-NTPTiming {
    #Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\services\W32Time\Parameters" -Name "NtpServer" -Type String -Value "time.cloudflare.com,0x9"
    #Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\DateTime\Servers" -Name "0" -Type String -Value "time.cloudflare.com"
 
-   # TESTING
+   # Set NTP paramters
    Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\services\W32Time\Parameters" -Name "Type" -Type String -Value NTP
-   Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\services\W32Time\Parameters" -Name "NtpServer" -Type String -Value "balrog.carumba.org,0x9 time.cloudflare.com,0x9 0.pool.ntp.org,0x9 1.pool.ntp.org,0x9 2.pool.ntp.org,0x9 3.pool.ntp.org,0x9"
+   Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\services\W32Time\Parameters" -Name "NtpServer" -Type String -Value $ntpservers
    Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\DateTime\Servers" -Name "0" -Type String -Value "time.cloudflare.com"
 
    # w32tm /config /syncfromflags:manual /manualpeerlist:"balrog.carumba.org,0x9 time.cloudflare.com,0x9 0.pool.ntp.org,0x9 1.pool.ntp.org,0x9 2.pool.ntp.org,0x9 3.pool.ntp.org,0x9" /update
