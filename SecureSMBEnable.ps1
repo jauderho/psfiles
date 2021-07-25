@@ -49,7 +49,7 @@ Write-Output 'Running with full privileges...'
 function Enable-SecureSMBClient {
    Set-SmbServerConfiguration -Force -AuditSmb1Access $true
    # Get-WinEvent -LogName Microsoft-Windows-SMBServer/Audit
-   # Get-SmbSession | Select Dialect,ClientComputerName,ClientUserName | Where-Object {$_.Dialect –lt 2.00}
+   # Get-SmbSession | Select Dialect,ClientComputerName,ClientUserName | Where-Object {$_.Dialect -lt 2.00}
 
    Disable-WindowsOptionalFeature -Online -FeatureName smb1Protocol -NoRestart
 

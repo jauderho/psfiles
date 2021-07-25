@@ -173,8 +173,8 @@ foreach ($app in $apps) {
 }
 
 # The following cannot be uninstalled using Remove-AppxPackage
-Get-WindowsCapability -online | Where-Object {$_.Name -like '*ContactSupport*'} | Remove-WindowsCapability –online
-Get-WindowsCapability -online | Where-Object {$_.Name -like '*QuickAssist*'} | Remove-WindowsCapability –online
+Get-WindowsCapability -online | Where-Object {$_.Name -like '*ContactSupport*'} | Remove-WindowsCapability -Online
+Get-WindowsCapability -online | Where-Object {$_.Name -like '*QuickAssist*'} | Remove-WindowsCapability -Online
 
 # Disable scheduled tasks
 Get-ScheduledTask -TaskName XblGameSaveTaskLogon | Disable-ScheduledTask

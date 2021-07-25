@@ -44,14 +44,14 @@ Write-Output 'Running with full privileges...'
 function Enable-VMwareRSS {
    # https://virtualnomadblog.com/2018/04/04/vmware-tools-10-2-5/
    # https://kb.vmware.com/s/article/2008925
-   Get-NetAdapter | Where-Object { $_.InterfaceDescription -like “vmxnet3*” } | Get-NetAdapterAdvancedProperty | Where-Object { $_.RegistryKeyword -like “*RSS” -or $_.RegistryKeyword -like “RxThrottle” } | Format-Table -AutoSize
+   Get-NetAdapter | Where-Object { $_.InterfaceDescription -like "vmxnet3*" } | Get-NetAdapterAdvancedProperty | Where-Object { $_.RegistryKeyword -like "*RSS" -or $_.RegistryKeyword -like "RxThrottle" } | Format-Table -AutoSize
 
-   Get-NetAdapter | Where-Object { $_.InterfaceDescription -like “vmxnet3*” } | Set-NetAdapterAdvancedProperty -DisplayName “Receive Side Scaling” -DisplayValue “Enabled” -NoRestart
-   Get-NetAdapter | Where-Object { $_.InterfaceDescription -like “vmxnet3*” } | Set-NetAdapterAdvancedProperty -DisplayName “Receive Throttle” -DisplayValue “30” -NoRestart
+   Get-NetAdapter | Where-Object { $_.InterfaceDescription -like "vmxnet3*" } | Set-NetAdapterAdvancedProperty -DisplayName "Receive Side Scaling" -DisplayValue "Enabled" -NoRestart
+   Get-NetAdapter | Where-Object { $_.InterfaceDescription -like "vmxnet3*" } | Set-NetAdapterAdvancedProperty -DisplayName "Receive Throttle" -DisplayValue "30" -NoRestart
 
-   Get-NetAdapter | Where-Object { $_.InterfaceDescription -like “vmxnet3*” } | Get-NetAdapterAdvancedProperty | Where-Object { $_.RegistryKeyword -like “*RSS” -or $_.RegistryKeyword -like “RxThrottle” } | Format-Table -AutoSize
+   Get-NetAdapter | Where-Object { $_.InterfaceDescription -like "vmxnet3*" } | Get-NetAdapterAdvancedProperty | Where-Object { $_.RegistryKeyword -like "*RSS" -or $_.RegistryKeyword -like "RxThrottle" } | Format-Table -AutoSize
 
-   # Get-NetAdapter | Get-NetAdapterAdvancedProperty | Where-Object { $_.RegistryKeyword -like “*RSS” -or $_.RegistryKeyword -like “RxThrottle” } | Format-Table -AutoSize
+   # Get-NetAdapter | Get-NetAdapterAdvancedProperty | Where-Object { $_.RegistryKeyword -like "*RSS" -or $_.RegistryKeyword -like "RxThrottle" } | Format-Table -AutoSize
 }
 
 Enable-VMwareRSS
