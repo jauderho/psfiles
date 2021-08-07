@@ -50,9 +50,15 @@ function Set-NTPTiming {
    # Define the list of NTP servers to be used. Adjust as necessary. Try to use at least 4 servers.
    $ntpservers = "balrog.carumba.org,0x9 time.cloudflare.com,0x9 0.pool.ntp.org,0x9 1.pool.ntp.org,0x9 2.pool.ntp.org,0x9 3.pool.ntp.org,0x9"
 
+   $IsVirtual=((Get-CimInstance win32_computersystem).model -eq 'VMware Virtual Platform' -or ((Get-CimInstance win32_computersystem).model -eq 'Virtual Machine'))
+
    # Force clock resync every hour (3600s)
    # VMware recommends a resync every 15 mins for VMs (900s)
-   Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\services\W32Time\TimeProviders\NtpClient" -Name "SpecialPollInterval" -Type DWord -Value 900
+   if ($IsVirtual) {
+      Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\services\W32Time\TimeProviders\NtpClient" -Name "SpecialPollInterval" -Type DWord -Value 900
+   } else {
+      Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\services\W32Time\TimeProviders\NtpClient" -Name "SpecialPollInterval" -Type DWord -Value 3600
+   }
    # Get-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\services\W32Time\TimeProviders\NtpClient" -Name "SpecialPollInterval"
 
    # If 0x5 does not work, try using 0xA
