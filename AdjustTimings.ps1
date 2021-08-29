@@ -49,6 +49,7 @@ function Set-NTPTiming {
 
    # Define the list of NTP servers to be used. Adjust as necessary. Try to use at least 4 servers.
    $ntpservers = "balrog.carumba.org,0x9 time.cloudflare.com,0x9 0.pool.ntp.org,0x9 1.pool.ntp.org,0x9 2.pool.ntp.org,0x9 3.pool.ntp.org,0x9"
+   #$ntpservers = "balrog.carumba.org,0x1 time.cloudflare.com,0x1 0.pool.ntp.org,0x1 1.pool.ntp.org,0x1 2.pool.ntp.org,0x1 3.pool.ntp.org,0x1"  
 
    $IsVirtual=((Get-CimInstance win32_computersystem).model -eq 'VMware Virtual Platform' -or ((Get-CimInstance win32_computersystem).model -eq 'Virtual Machine'))
 
@@ -62,7 +63,7 @@ function Set-NTPTiming {
    # Get-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\services\W32Time\TimeProviders\NtpClient" -Name "SpecialPollInterval"
 
    # If 0x5 does not work, try using 0xA
-   Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\services\W32Time\Config" -Name "AnnounceFlags" -Type DWord -Value 0x5
+   #Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\services\W32Time\Config" -Name "AnnounceFlags" -Type DWord -Value 0x5
 
    # 0x9 is a combination of 0x1 (Use SpecialPollInterval) and 0x8 (act as client)
    # Currently using time.cloudflare.com. Change this as necessary
@@ -74,6 +75,15 @@ function Set-NTPTiming {
    Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\services\W32Time\Parameters" -Name "Type" -Type String -Value NTP
    Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\services\W32Time\Parameters" -Name "NtpServer" -Type String -Value $ntpservers
    Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\DateTime\Servers" -Name "0" -Type String -Value "time.cloudflare.com"
+
+   # Set the following for high accuracy
+   # https://docs.microsoft.com/en-us/windows-server/networking/windows-time-service/configuring-systems-for-high-accuracy?tabs=MaxPollInterval#registry-settings
+   # https://github.com/MicrosoftDocs/windowsserverdocs/issues/2065
+   Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Services\W32Time\Config" -Name "MinPollInterval" -Type DWord -Value 6
+   Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Services\W32Time\Config" -Name "MaxPollInterval" -Type DWord -Value 6
+   Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Services\W32Time\Config" -Name "UpdateInterval" -Type DWord -Value 100
+   Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Services\W32Time\Config" -Name "FrequencyCorrectRate" -Type DWord -Value 2
+   #Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Services\W32Time\TimeProviders\NtpClient" -Name "SpecialPollInterval" -Type DWord -Value 64
 
    # w32tm /config /syncfromflags:manual /manualpeerlist:"balrog.carumba.org,0x9 time.cloudflare.com,0x9 0.pool.ntp.org,0x9 1.pool.ntp.org,0x9 2.pool.ntp.org,0x9 3.pool.ntp.org,0x9" /update
    # w32tm /config /syncfromflags:manual /manualpeerlist:"0.pool.ntp.org,0x9 1.pool.ntp.org,0x9 2.pool.ntp.org,0x9 3.pool.ntp.org,0x9" /update
