@@ -43,19 +43,23 @@ Write-Output 'Running with full privileges...'
 
 function Enable-SecureRDP {
    # Permit RDP to run
-   (Get-CimInstance -class "Win32_TerminalServiceSetting" -Namespace root\cimv2\terminalservices).SetAllowTSConnections(1,1) | Out-Null
+   # (Get-CimInstance -class "Win32_TerminalServiceSetting" -Namespace root\cimv2\terminalservices).SetAllowTSConnections(1,1) | Out-Null
+   (Get-WmiObject -class "Win32_TerminalServiceSetting" -Namespace root\cimv2\terminalservices).SetAllowTSConnections(1,1) | Out-Null
 
    # Remote Desktop Services: Enable NLA Requirement
    # (Get-CimInstance -class "Win32_TSGeneralSetting" -Namespace root\cimv2\terminalservices -Filter "TerminalName='RDP-tcp'").UserAuthenticationRequired
-   (Get-CimInstance -class "Win32_TSGeneralSetting" -Namespace root\cimv2\terminalservices -Filter "TerminalName='RDP-tcp'").SetUserAuthenticationRequired(1) | Out-Null
+   # (Get-CimInstance -class "Win32_TSGeneralSetting" -Namespace root\cimv2\terminalservices -Filter "TerminalName='RDP-tcp'").SetUserAuthenticationRequired(1) | Out-Null
+   (Get-WmiObject -class "Win32_TSGeneralSetting" -Namespace root\cimv2\terminalservices -Filter "TerminalName='RDP-tcp'").SetUserAuthenticationRequired(1) | Out-Null
 
    # Remote Desktop Services: Require 'High' level of encryption
    # (Get-CimInstance -class "Win32_TSGeneralSetting" -Namespace root\cimv2\terminalservices -Filter "TerminalName='RDP-tcp'").MinEncryptionLevel
-   (Get-CimInstance -class "Win32_TSGeneralSetting" -Namespace root\cimv2\terminalservices -Filter "TerminalName='RDP-tcp'").SetEncryptionLevel(3) | Out-Null
+   # (Get-CimInstance -class "Win32_TSGeneralSetting" -Namespace root\cimv2\terminalservices -Filter "TerminalName='RDP-tcp'").SetEncryptionLevel(3) | Out-Null
+   (Get-WmiObject -class "Win32_TSGeneralSetting" -Namespace root\cimv2\terminalservices -Filter "TerminalName='RDP-tcp'").SetEncryptionLevel(3) | Out-Null
 
    # Remote Desktop Services: Set Security Layer to SSL
    # (Get-CimInstance -class "Win32_TSGeneralSetting" -Namespace root\cimv2\terminalservices -Filter "TerminalName='RDP-tcp'").SecurityLayer
-   (Get-CimInstance -class "Win32_TSGeneralSetting" -Namespace root\cimv2\terminalservices -Filter "TerminalName='RDP-tcp'").SetSecurityLayer(2) | Out-Null
+   # (Get-CimInstance -class "Win32_TSGeneralSetting" -Namespace root\cimv2\terminalservices -Filter "TerminalName='RDP-tcp'").SetSecurityLayer(2) | Out-Null
+   (Get-WmiObject -class "Win32_TSGeneralSetting" -Namespace root\cimv2\terminalservices -Filter "TerminalName='RDP-tcp'").SetSecurityLayer(2) | Out-Null
 
    # Allow RDP connections
    # Get-ItemProperty -Path "HKLM:\System\CurrentControlSet\Control\Terminal Server" -Name "fDenyTSConnections"
