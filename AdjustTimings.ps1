@@ -49,7 +49,7 @@ function Set-NTPTiming {
 
    # Define the list of NTP servers to be used. Adjust as necessary. Try to use at least 4 servers.
    $ntpservers = "balrog.carumba.org,0x9 time.cloudflare.com,0x9 0.pool.ntp.org,0x9 1.pool.ntp.org,0x9 2.pool.ntp.org,0x9 3.pool.ntp.org,0x9"
-   #$ntpservers = "balrog.carumba.org,0x1 time.cloudflare.com,0x1 0.pool.ntp.org,0x1 1.pool.ntp.org,0x1 2.pool.ntp.org,0x1 3.pool.ntp.org,0x1"  
+   #$ntpservers = "balrog.carumba.org,0x1 time.cloudflare.com,0x1 0.pool.ntp.org,0x1 1.pool.ntp.org,0x1 2.pool.ntp.org,0x1 3.pool.ntp.org,0x1"
 
    $IsVirtual=((Get-CimInstance win32_computersystem).model -eq 'VMware Virtual Platform' -or ((Get-CimInstance win32_computersystem).model -eq 'Virtual Machine'))
 
