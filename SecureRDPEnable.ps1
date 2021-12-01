@@ -41,6 +41,9 @@ if ((Test-Admin) -eq $false) {
 
 Write-Output 'Running with full privileges...'
 
+# Make sure that WinRM is running
+Get-Service -Name winRM | Set-Service -Status Running
+
 function Enable-SecureRDP {
    # Permit RDP to run
    # (Get-CimInstance -class "Win32_TerminalServiceSetting" -Namespace root\cimv2\terminalservices).SetAllowTSConnections(1,1) | Out-Null
