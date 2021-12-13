@@ -20,7 +20,6 @@
     ExcludeRules = @(
     #    'PSAvoidUsingWriteHost',
     #    'PSMissingModuleManifestField'
-        'PSAvoidUsingWMICmdlet',
         'PSUseShouldProcessForStateChangingFunctions'
     )
 

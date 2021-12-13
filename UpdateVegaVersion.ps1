@@ -6,7 +6,19 @@
 .DESCRIPTION
    Set the correct AMD driver version manually
 
-   AMD stopped providing proper driver updates after 10.4.1 for Hades Canyon systems. This enables the use of the AMD software after manually installing the Vega 64 driver.
+   AMD stopped providing proper driver updates after 10.4.1 for Hades Canyon systems. This enables the use of the AMD software after manually installing the Radeon RX Vega 64 driver.
+
+   Steps to take:
+   * Download the latest driver from http://www.amd.com/us-en/drivers/
+   * Install the driver (driver install will error out)
+   * Start Device Manager
+   * Select "Update Driver" for RX Vega 64
+   * Navigate to the C:\AMD folder
+   * Select the desired version
+   * Complete install
+   * Run this script
+   * Radeon Software dashboard will now work
+
 .NOTES
    Created by Jauder Ho
    Last modified 11/1/2020
