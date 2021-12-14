@@ -44,7 +44,11 @@ function Find-Log4J {
 
 	# Search through local drives for jar files containing the jndi class
 	# NOTE: This will flag patched files
-	gcim win32_volume | ? { $_.DriveType -eq 3 -and $_.DriveLetter -ne $null} | % {(gci ($_.DriveLetter+"\") -rec -force -include *.jar -ea 0 | % {sls "JndiLookup.class" $_} | select -exp Path)}
+	gcim win32_volume |
+    Where-Object { $_.DriveType -eq 3 -and $null -ne $_.DriveLetter} |
+     ForEach-Object {(Get-ChildItem ($_.DriveLetter+"\") -rec -force -include *.jar -ea 0 |
+      ForEach-Object {Select-String "JndiLookup.class" $_} |
+       Select-Object -exp Path)}
 
 	# Linux version
 	# find / 2>/dev/null -regex ".*.jar" -type f | xargs -I{} grep JndiLookup.class "{}"
@@ -54,4 +58,4 @@ function Find-Log4J {
 
 Find-Log4J
 
-#Write-Output 'Done...'
+Write-Output 'Done...'
