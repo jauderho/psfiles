@@ -46,9 +46,9 @@ function Find-Log4J {
 	# NOTE: This will flag patched files
 	gcim win32_volume |
     Where-Object { $_.DriveType -eq 3 -and $null -ne $_.DriveLetter} |
-     ForEach-Object {(Get-ChildItem ($_.DriveLetter+"\") -rec -force -include *.jar -ea 0 |
-      ForEach-Object {Select-String "JndiLookup.class" $_} |
-       Select-Object -exp Path)}
+    ForEach-Object {(Get-ChildItem ($_.DriveLetter+"\") -rec -force -include *.jar -ea 0 |
+    ForEach-Object {Select-String "JndiLookup.class" $_} |
+    Select-Object -exp Path)}
 
 	# Linux version
 	# find / 2>/dev/null -regex ".*.jar" -type f | xargs -I{} grep JndiLookup.class "{}"
