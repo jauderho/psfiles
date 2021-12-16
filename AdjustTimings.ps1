@@ -71,7 +71,7 @@ function Set-NTPTiming {
    #Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\services\W32Time\Parameters" -Name "NtpServer" -Type String -Value "time.cloudflare.com,0x9"
    #Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\DateTime\Servers" -Name "0" -Type String -Value "time.cloudflare.com"
 
-   # Set NTP paramters
+   # Set NTP parameters
    Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\services\W32Time\Parameters" -Name "Type" -Type String -Value NTP
    Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\services\W32Time\Parameters" -Name "NtpServer" -Type String -Value $ntpservers
    Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\DateTime\Servers" -Name "0" -Type String -Value "time.cloudflare.com"
@@ -115,7 +115,7 @@ function Set-MPTiming {
    Set-MpPreference -DisableBlockAtFirstSeen $False
    Set-MpPreference -CloudExtendedTimeout 50
 
-   # Adjust as neccessary
+   # Adjust as necessary
    Set-MpPreference -DisableRemovableDriveScanning $False
    Set-MpPreference -DisableEmailScanning $False
 
