@@ -10,6 +10,9 @@ on:
   pull_request:
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 # Set the Job #
 jobs:
   build:
@@ -21,15 +24,20 @@ jobs:
     # Load all steps #
     steps:
       # Checkout the code base #
+      - name: Harden Runner
+        uses: step-security/harden-runner@14dc64f30986eaa2ad2dddcec073f5aab18e5a24 # v1
+        with:
+          egress-policy: audit
+          
       - name: Checkout Code
-        uses: actions/checkout@v2
+        uses: actions/checkout@629c2de402a417ea7690ca6ce3f33229e27606a5 # v2
         with:
           # Full git history is needed to get a proper list of changed files within `super-linter`
           fetch-depth: 0
 
       # Run Linter against code base #
       - name: Lint Code Base
-        uses: github/super-linter@v4
+        uses: github/super-linter@b8641364ca9a79b3cf07f3c4c59a82709cd39094 # v4
         env:
           VALIDATE_ALL_CODEBASE: true
           DEFAULT_BRANCH: main
