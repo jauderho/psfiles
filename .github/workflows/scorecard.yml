@@ -15,24 +15,32 @@ permissions: read-all
 jobs:
   analysis:
     name: Scorecards analysis
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     permissions:
       # Needed to upload the results to code-scanning dashboard.
       security-events: write
+      id-token: write
       actions: read
       contents: read
 
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@ebacdc22ef6c2cfb85ee5ded8f2e640f4c776dd5 # v1
+        uses: step-security/harden-runner@ebacdc22ef6c2cfb85ee5ded8f2e640f4c776dd5 # v2.0.0
         with:
+          disable-sudo: true
           egress-policy: block
+          disable-telemetry: true
           allowed-endpoints:
             api.github.com:443
             api.osv.dev:443
+            api.securityscorecards.dev:443
             bestpractices.coreinfrastructure.org:443
             codeload.github.com:443
             github.com:443
+            fulcio.sigstore.dev:443
+            oauth2.sigstore.dev:443
+            rekor.sigstore.dev:443
+            sigstore-tuf-root.storage.googleapis.com:443
 
       - name: "Checkout code"
         uses: actions/checkout@755da8c3cf115ac066823e79a1e1788f8940201b # v2.4.0
@@ -40,13 +48,14 @@ jobs:
           persist-credentials: false
 
       - name: "Run analysis"
-        uses: ossf/scorecard-action@937ffa90d79c7d720498178154ad4c7ba1e4ad8c
+        uses: ossf/scorecard-action@937ffa90d79c7d720498178154ad4c7ba1e4ad8c #v2.1.0
         with:
           results_file: results.sarif
           results_format: sarif
           # Read-only PAT token. To create it,
           # follow the steps in https://github.com/ossf/scorecard-action#pat-token-creation.
           repo_token: ${{ secrets.SCORECARD_TOKEN }}
+          #repo_token: ${{ secrets.GITHUB_TOKEN }}
           # Publish the results for public repositories to enable scorecard badges. For more details, see
           # https://github.com/ossf/scorecard-action#publishing-results.
           # For private repositories, `publish_results` will automatically be set to `false`, regardless
