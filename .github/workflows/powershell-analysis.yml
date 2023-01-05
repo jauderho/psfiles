@@ -30,7 +30,7 @@ jobs:
         with:
           egress-policy: audit
           
-      - uses: actions/checkout@755da8c3cf115ac066823e79a1e1788f8940201b # v2
+      - uses: actions/checkout@ac593985615ec2ede58e132d2e21d2b1cbd6127c # v2
 
       - name: Run PSScriptAnalyzer
         uses: microsoft/psscriptanalyzer-action@6b2948b1944407914a58661c49941824d149734f
