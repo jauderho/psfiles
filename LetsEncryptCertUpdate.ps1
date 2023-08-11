@@ -50,26 +50,55 @@ Get-Service -Name winRM | Set-Service -Status Running
 # USE THIS
 #
 # POSH script to import PFX cert for use with RDP (in this case a Let's Encrypt cert)
-# Once this is done, RDP will no longer complain about the hostname when connecting
+# Once this is done, RDP will no longer complain about the hostname when connecting.
 # Creation and renewal of cert is left as an exercise for the user. ACMESharp could potentially be used
-# as part of an overall solution
+# as part of an overall solution.
 #
+# Create a config.json file in the same directory and define values for "srcDir" and "domain"
+#
+
+# Get the path of the config file
+#$configPath = Join-Path -Path $PSScriptRoot -ChildPath 'config.json'
+
+# import the configuration from the JSON file
+#$config = Get-Content -Path $configPath | ConvertFrom-Json
+#$config = Get-Content -Path '.\config.json' | ConvertFrom-Json
+
+# get the directory where the script is located
+$scriptDirectory = Split-Path -Parent $MyInvocation.MyCommand.Path
+
+# check if the config.json file exists in the script directory
+$configPath = Join-Path -Path $scriptDirectory -ChildPath "config.json"
+if (-not (Test-Path $configPath)) {
+    Write-Host "config.json file not found in the script directory."
+    Exit
+}
+
+# read the config.json file
+$config = Get-Content -Path $configPath | ConvertFrom-Json
+
 # define where the certificate is located. Make sure to include trailing \ in path
-$srcdir = ""
-$nic = ""
+$srcdir = $config.srcDir
+$nic = $config.domain
 
 # there does not seem to be a good way to get the FQDN. start by figuring out the associated DNS domain
 #$nic = Get-WmiObject -Class Win32_NetworkAdapterConfiguration -Filter IPEnabled=TRUE -ComputerName . | Select-Object -Property DNSDomain
 #$nic = Get-CimInstance -Class Win32_NetworkAdapterConfiguration -Filter IPEnabled=TRUE -ComputerName . | Select-Object -Property DNSDomain
+#
+# this works. more testing needed
+# [System.Net.Dns]::GetHostByAddress([System.Net.Dns]::GetHostByName($env:computerName).AddressList[0]).HostName
 
 # FQDN assemble! Also, trim any extraneous space
 #$fqdn = $fqdn + "." + $nic.DNSDomain
 $fqdn = $env:computername + "." + $nic
 $fqdn = $fqdn.trim()
+#$fqdn = "$env:COMPUTERNAME.$nic".Trim()
+#$fqdn =  [System.Net.Dns]::GetHostByAddress([System.Net.Dns]::GetHostByName($env:computerName).AddressList[0]).HostName
 
 # full path to PFX file. PFX filename should be <FQDN>.pfx
 $pfxfile = $fqdn + ".pfx"
 $pfxfile = join-path $srcdir $pfxfile
+#$pfxfile = Join-Path -Path $srcdir -ChildPath "$fqdn.pfx"
 
 # run if PFX exists
 if (Test-Path $pfxfile) {
@@ -81,10 +110,10 @@ if (Test-Path $pfxfile) {
 	#$path = (Get-WmiObject -class "Win32_TSGeneralSetting" -Namespace root\cimv2\terminalservices -Filter "TerminalName='RDP-tcp'").__path
 	#Set-WmiInstance -Path $path -argument @{SSLCertificateSHA1Hash="$thumbprint"}
 
-   # configure RDP to use the right cert
-   # https://serverfault.com/questions/1025992/cant-write-to-root-cimv2-terminalservices-via-powershell
-   $RDPInstance = Get-CimInstance -ClassName Win32_TSGeneralSetting -Namespace ROOT\CIMV2\TerminalServices
-   Set-CimInstance -CimInstance $RDPInstance -Property @{SSLCertificateSHA1Hash="$thumbprint"} -PassThru
+	# configure RDP to use the right cert
+	# https://serverfault.com/questions/1025992/cant-write-to-root-cimv2-terminalservices-via-powershell
+	$RDPInstance = Get-CimInstance -ClassName Win32_TSGeneralSetting -Namespace ROOT\CIMV2\TerminalServices
+	Set-CimInstance -CimInstance $RDPInstance -Property @{SSLCertificateSHA1Hash="$thumbprint"} -PassThru
 
 	# cleanup on aisle 9. PFX file is no longer needed once imported
 	Remove-Item $pfxfile
