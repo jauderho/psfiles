@@ -1,12 +1,12 @@
 
 <#
 .SYNOPSIS
-   Set the correct AMD driver version
+   Set the correct AMD driver version for the Hades Canyon NUCs
 
 .DESCRIPTION
-   Set the correct AMD driver version manually
+   Set the correct AMD driver version manually for the Hades Canyon NUCs.
 
-   AMD stopped providing proper driver updates after 10.4.1 for Hades Canyon systems. This enables the use of the AMD software after manually installing the Radeon RX Vega 64 driver.
+   AMD stopped providing proper driver updates after 10.4.1 for Hades Canyon systems. This enables the use of the latest AMD software after manually installing the Radeon RX Vega 64 driver.
 
    Steps to take:
    * Download the latest driver from http://www.amd.com/us-en/drivers/
@@ -14,7 +14,8 @@
    * Start Device Manager
    * Select "Update Driver" for RX Vega 64
    * Navigate to the C:\AMD folder
-   * Select the desired version
+   * For example: C:\AMD\AMD-Software-Adrenalin-Edition-22.4.1-Win10-Win11-April5\Packages\Drivers\Display\WT6A_INF\
+   * Select the desired version (file starting with U or C, ignore the complaint about mismatch)
    * Complete install
    * Run this script
    * Radeon Software dashboard will now work
