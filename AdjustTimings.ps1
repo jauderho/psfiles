@@ -173,7 +173,7 @@ function Disable-LLMNR {
 
    Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\DNSClient" -Name "EnableMulticast" -Type DWORD -Value 0 -Force
 
-	 Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Services\NetBT\Parameters" -Name "EnableLMHOSTS" -Type DWord -Value 0 -Force
+   Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\DNSClient" -Name "EnableMulticast" -Type DWORD -Value 0 -Force
 }
 
 Set-NTPTiming
