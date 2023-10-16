@@ -89,6 +89,11 @@ function Set-NTPTiming {
    # w32tm /config /syncfromflags:manual /manualpeerlist:"0.pool.ntp.org,0x9 1.pool.ntp.org,0x9 2.pool.ntp.org,0x9 3.pool.ntp.org,0x9" /update
    # w32tm /config /syncfromflags:manual /manualpeerlist:"time.cloudflare.com,0x9" /update
 
+   # Disable SecureTimeSeeding. See https://arstechnica.com/security/2023/08/windows-feature-that-resets-system-clocks-based-on-random-data-is-wreaking-havoc/
+   # Get-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Services\W32Time\SecureTimeLimits"
+   # Get-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Services\W32Time\Config" -Name "UtilizeSslTimeData"
+   Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Services\W32Time\Config" -Name "UtilizeSslTimeData" -Type DWord -Value 0
+
    # Restart time server to take effect
    Stop-Service w32time
    Start-Service w32time
