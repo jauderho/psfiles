@@ -1,10 +1,10 @@
 
 <#
 .SYNOPSIS
-   Enable BBRv2 as the TCP congestion provider
+   Disable BBRv2 as the TCP congestion provider
 
 .DESCRIPTION
-   Enable BBRv2 as the TCP congestion provider
+   Disable BBRv2 as the TCP congestion provider
 
 .NOTES
    Created by Jauder Ho
@@ -47,14 +47,14 @@ if ((Test-Admin) -eq $false) {
 
 Write-Output 'Running with full privileges...'
 
-function Enable-BBRv2 {
-  Set-NetTCPSetting -SettingName "Internet" -CongestionProvider BBR2
-  Set-NetTCPSetting -SettingName "Datacenter" -CongestionProvider BBR2
-  Set-NetTCPSetting -SettingName "Compat" -CongestionProvider BBR2
-  Set-NetTCPSetting -SettingName "InternetCustom" -CongestionProvider BBR2
-  Set-NetTCPSetting -SettingName "DatacenterCustom" -CongestionProvider BBR2
+function Disable-BBRv2 {
+  Set-NetTCPSetting -SettingName "Internet" -CongestionProvider Cubic
+  Set-NetTCPSetting -SettingName "Datacenter" -CongestionProvider Cubic
+  Set-NetTCPSetting -SettingName "Compat" -CongestionProvider NewReno
+  Set-NetTCPSetting -SettingName "InternetCustom" -CongestionProvider Cubic
+  Set-NetTCPSetting -SettingName "DatacenterCustom" -CongestionProvider Cubic
 
-  Write-Output 'BBRv2 has been enabled'
+  Write-Output 'BBRv2 has been disabled'
 }
 
-Enable-BBRv2
+Disable-BBRv2
