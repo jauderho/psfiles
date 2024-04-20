@@ -48,6 +48,8 @@ if ((Test-Admin) -eq $false) {
 Write-Output 'Running with full privileges...'
 
 function Enable-BBRv2 {
+   # Use "Get-NetTCPSetting | Select SettingName, CongestionProvider" to get current settings
+
    Set-NetTCPSetting -SettingName "Internet" -CongestionProvider BBR2
    Set-NetTCPSetting -SettingName "Datacenter" -CongestionProvider BBR2
    Set-NetTCPSetting -SettingName "Compat" -CongestionProvider BBR2
