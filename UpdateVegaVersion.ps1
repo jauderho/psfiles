@@ -38,8 +38,8 @@
 param([switch]$Elevated)
 
 function Test-Admin {
-  $currentUser = New-Object Security.Principal.WindowsPrincipal $([Security.Principal.WindowsIdentity]::GetCurrent())
-  $currentUser.IsInRole([Security.Principal.WindowsBuiltinRole]::Administrator)
+    $currentUser = New-Object Security.Principal.WindowsPrincipal $([Security.Principal.WindowsIdentity]::GetCurrent())
+    $currentUser.IsInRole([Security.Principal.WindowsBuiltinRole]::Administrator)
 }
 
 if ((Test-Admin) -eq $false) {
@@ -58,7 +58,7 @@ Write-Output 'Running with full privileges...'
 function Update-VegaVersion {
     [CmdletBinding(
         SupportsShouldProcess,
-        ConfirmImpact="Low"
+        ConfirmImpact = "Low"
     )]
 
     # For tips on how to manually upgrade AMD driver for Hades Canyon
@@ -71,7 +71,7 @@ function Update-VegaVersion {
     # Get-WindowsDriver -Online -All | select ProviderName, Driver, OriginalFileName, Version | where {$_.Driver -like "*oem52.inf*"}
     #
     #$vegadriver = Get-WmiObject Win32_PnPSignedDriver | Select-Object DeviceName, Manufacturer, DriverVersion | Where-Object {$_.DeviceName -like "*Vega*"} | Select-Object DriverVersion
-    $vegadriver = Get-CimInstance Win32_PnPSignedDriver | Select-Object DeviceName, Manufacturer, DriverVersion | Where-Object {$_.DeviceName -like "*Vega*"} | Select-Object DriverVersion
+    $vegadriver = Get-CimInstance Win32_PnPSignedDriver | Select-Object DeviceName, Manufacturer, DriverVersion | Where-Object { $_.DeviceName -like "*Vega*" } | Select-Object DriverVersion
     $vegaversion = $vegadriver.DriverVersion | Select-Object -First 1
     #$version = "26.20.15029.20013"
 

@@ -30,31 +30,31 @@
 param([switch]$Elevated)
 
 function Test-Admin {
-  $currentUser = New-Object Security.Principal.WindowsPrincipal $([Security.Principal.WindowsIdentity]::GetCurrent())
-  $currentUser.IsInRole([Security.Principal.WindowsBuiltinRole]::Administrator)
+   $currentUser = New-Object Security.Principal.WindowsPrincipal $([Security.Principal.WindowsIdentity]::GetCurrent())
+   $currentUser.IsInRole([Security.Principal.WindowsBuiltinRole]::Administrator)
 }
 
 if ((Test-Admin) -eq $false) {
-    if ($elevated) {
-        # tried to elevate, did not work, aborting
-    }
-    else {
-        Start-Process powershell.exe -Verb RunAs -ArgumentList ('-noprofile -noexit -file "{0}" -elevated' -f ($myinvocation.MyCommand.Definition))
-    }
+   if ($elevated) {
+      # tried to elevate, did not work, aborting
+   }
+   else {
+      Start-Process powershell.exe -Verb RunAs -ArgumentList ('-noprofile -noexit -file "{0}" -elevated' -f ($myinvocation.MyCommand.Definition))
+   }
 
-    exit
+   exit
 }
 
 Write-Output 'Running with full privileges...'
 
 function Enable-BBRv2 {
-  Set-NetTCPSetting -SettingName "Internet" -CongestionProvider BBR2
-  Set-NetTCPSetting -SettingName "Datacenter" -CongestionProvider BBR2
-  Set-NetTCPSetting -SettingName "Compat" -CongestionProvider BBR2
-  Set-NetTCPSetting -SettingName "InternetCustom" -CongestionProvider BBR2
-  Set-NetTCPSetting -SettingName "DatacenterCustom" -CongestionProvider BBR2
+   Set-NetTCPSetting -SettingName "Internet" -CongestionProvider BBR2
+   Set-NetTCPSetting -SettingName "Datacenter" -CongestionProvider BBR2
+   Set-NetTCPSetting -SettingName "Compat" -CongestionProvider BBR2
+   Set-NetTCPSetting -SettingName "InternetCustom" -CongestionProvider BBR2
+   Set-NetTCPSetting -SettingName "DatacenterCustom" -CongestionProvider BBR2
 
-  Write-Output 'BBRv2 has been enabled'
+   Write-Output 'BBRv2 has been enabled'
 }
 
 Enable-BBRv2

@@ -18,8 +18,8 @@
     # for a few rules you wish to "exclude".  Note: if a rule is in both IncludeRules
     # and ExcludeRules, the rule will be excluded.
     ExcludeRules = @(
-    #    'PSAvoidUsingWriteHost',
-    #    'PSMissingModuleManifestField'
+        #    'PSAvoidUsingWriteHost',
+        #    'PSMissingModuleManifestField'
         'PSUseShouldProcessForStateChangingFunctions'
     )
 

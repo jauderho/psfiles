@@ -26,19 +26,19 @@
 param([switch]$Elevated)
 
 function Test-Admin {
-  $currentUser = New-Object Security.Principal.WindowsPrincipal $([Security.Principal.WindowsIdentity]::GetCurrent())
-  $currentUser.IsInRole([Security.Principal.WindowsBuiltinRole]::Administrator)
+	$currentUser = New-Object Security.Principal.WindowsPrincipal $([Security.Principal.WindowsIdentity]::GetCurrent())
+	$currentUser.IsInRole([Security.Principal.WindowsBuiltinRole]::Administrator)
 }
 
 if ((Test-Admin) -eq $false) {
-    if ($elevated) {
-        # tried to elevate, did not work, aborting
-    }
-    else {
-        Start-Process powershell.exe -Verb RunAs -ArgumentList ('-noprofile -noexit -file "{0}" -elevated' -f ($myinvocation.MyCommand.Definition))
-    }
+	if ($elevated) {
+		# tried to elevate, did not work, aborting
+	}
+	else {
+		Start-Process powershell.exe -Verb RunAs -ArgumentList ('-noprofile -noexit -file "{0}" -elevated' -f ($myinvocation.MyCommand.Definition))
+	}
 
-    exit
+	exit
 }
 
 Write-Output 'Running with full privileges...'
@@ -168,13 +168,13 @@ $apps = @(
 foreach ($app in $apps) {
 	Write-Output "Trying to remove $app"
 
-	Get-AppxPackage -AllUsers | Where-Object {$_.Name -Like $app} | Remove-AppxPackage -AllUsers -ErrorAction SilentlyContinue
-	Get-AppxProvisionedPackage -Online | Where-Object {$_.DisplayName -Like $app} | Remove-AppxProvisionedPackage -Online -AllUsers -ErrorAction SilentlyContinue
+	Get-AppxPackage -AllUsers | Where-Object { $_.Name -Like $app } | Remove-AppxPackage -AllUsers -ErrorAction SilentlyContinue
+	Get-AppxProvisionedPackage -Online | Where-Object { $_.DisplayName -Like $app } | Remove-AppxProvisionedPackage -Online -AllUsers -ErrorAction SilentlyContinue
 }
 
 # The following cannot be uninstalled using Remove-AppxPackage
-Get-WindowsCapability -online | Where-Object {$_.Name -like '*ContactSupport*'} | Remove-WindowsCapability -Online
-Get-WindowsCapability -online | Where-Object {$_.Name -like '*QuickAssist*'} | Remove-WindowsCapability -Online
+Get-WindowsCapability -online | Where-Object { $_.Name -like '*ContactSupport*' } | Remove-WindowsCapability -Online
+Get-WindowsCapability -online | Where-Object { $_.Name -like '*QuickAssist*' } | Remove-WindowsCapability -Online
 
 # Disable scheduled tasks
 Get-ScheduledTask -TaskName XblGameSaveTaskLogon | Disable-ScheduledTask

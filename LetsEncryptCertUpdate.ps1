@@ -25,8 +25,8 @@
 param([switch]$Elevated)
 
 function Test-Admin {
-  $currentUser = New-Object Security.Principal.WindowsPrincipal $([Security.Principal.WindowsIdentity]::GetCurrent())
-  $currentUser.IsInRole([Security.Principal.WindowsBuiltinRole]::Administrator)
+    $currentUser = New-Object Security.Principal.WindowsPrincipal $([Security.Principal.WindowsIdentity]::GetCurrent())
+    $currentUser.IsInRole([Security.Principal.WindowsBuiltinRole]::Administrator)
 }
 
 if ((Test-Admin) -eq $false) {
@@ -103,24 +103,24 @@ $pfxfile = join-path $srcdir $pfxfile
 # run if PFX exists
 if (Test-Path $pfxfile) {
 
-	# import and obtain the thumbprint from the PFX file
-	$thumbprint = (Import-PfxCertificate -CertStoreLocation cert:\LocalMachine\my -FilePath $pfxfile).thumbprint
+    # import and obtain the thumbprint from the PFX file
+    $thumbprint = (Import-PfxCertificate -CertStoreLocation cert:\LocalMachine\my -FilePath $pfxfile).thumbprint
 
-	# configure RDP to use the right cert
-	#$path = (Get-WmiObject -class "Win32_TSGeneralSetting" -Namespace root\cimv2\terminalservices -Filter "TerminalName='RDP-tcp'").__path
-	#Set-WmiInstance -Path $path -argument @{SSLCertificateSHA1Hash="$thumbprint"}
+    # configure RDP to use the right cert
+    #$path = (Get-WmiObject -class "Win32_TSGeneralSetting" -Namespace root\cimv2\terminalservices -Filter "TerminalName='RDP-tcp'").__path
+    #Set-WmiInstance -Path $path -argument @{SSLCertificateSHA1Hash="$thumbprint"}
 
-	# configure RDP to use the right cert
-	# https://serverfault.com/questions/1025992/cant-write-to-root-cimv2-terminalservices-via-powershell
-	$RDPInstance = Get-CimInstance -ClassName Win32_TSGeneralSetting -Namespace ROOT\CIMV2\TerminalServices
-	Set-CimInstance -CimInstance $RDPInstance -Property @{SSLCertificateSHA1Hash="$thumbprint"} -PassThru
+    # configure RDP to use the right cert
+    # https://serverfault.com/questions/1025992/cant-write-to-root-cimv2-terminalservices-via-powershell
+    $RDPInstance = Get-CimInstance -ClassName Win32_TSGeneralSetting -Namespace ROOT\CIMV2\TerminalServices
+    Set-CimInstance -CimInstance $RDPInstance -Property @{SSLCertificateSHA1Hash = "$thumbprint" } -PassThru
 
-	# cleanup on aisle 9. PFX file is no longer needed once imported
-	Remove-Item $pfxfile
+    # cleanup on aisle 9. PFX file is no longer needed once imported
+    Remove-Item $pfxfile
 
-	# remove expired/old certs matching hostname
-	Get-ChildItem -Path "cert:\LocalMachine\my" -SSLServerAuthentication -ExpiringInDays 0 -DnsName *$env:computername* | Remove-Item
-	Get-ChildItem -Path "cert:\LocalMachine\Remote Desktop" -SSLServerAuthentication -ExpiringInDays 0 -DnsName *$env:computername* | Remove-Item
+    # remove expired/old certs matching hostname
+    Get-ChildItem -Path "cert:\LocalMachine\my" -SSLServerAuthentication -ExpiringInDays 0 -DnsName *$env:computername* | Remove-Item
+    Get-ChildItem -Path "cert:\LocalMachine\Remote Desktop" -SSLServerAuthentication -ExpiringInDays 0 -DnsName *$env:computername* | Remove-Item
 }
 
 Write-Output 'Certificate has been updated'
