@@ -1,0 +1,19 @@
+{
+  "name": "PowerShell Development Container",
+  "dockerFile": "Dockerfile",
+  "context": "..",
+  "appPort": [],
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-vscode.powershell",
+        "ms-azuretools.vscode-docker"
+      ],
+      "settings": {
+        "terminal.integrated.shell.linux": "/usr/bin/pwsh"
+      }
+    }
+  },
+  "postCreateCommand": "pwsh -Command 'Install-Module -Name PSScriptAnalyzer -Force -Scope CurrentUser'",
+  "remoteUser": "vscode"
+}
