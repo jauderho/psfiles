@@ -48,6 +48,12 @@ if ((Test-Admin) -eq $false) {
 Write-Output 'Running with full privileges...'
 
 function Disable-BBRv2 {
+   netsh int tcp set supplemental template=internet congestionprovider=CUBIC
+   netsh int tcp set supplemental template=internetcustom congestionprovider=CUBIC
+   netsh int tcp set supplemental template=Compat congestionprovider=NewReno
+   netsh int tcp set supplemental template=Datacenter congestionprovider=CUBIC
+   netsh int tcp set supplemental template=Datacentercustom congestionprovider=CUBIC
+
    Set-NetTCPSetting -SettingName "Internet" -CongestionProvider Cubic
    Set-NetTCPSetting -SettingName "Datacenter" -CongestionProvider Cubic
    Set-NetTCPSetting -SettingName "Compat" -CongestionProvider NewReno
