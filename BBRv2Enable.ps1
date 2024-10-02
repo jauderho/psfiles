@@ -49,6 +49,11 @@ Write-Output 'Running with full privileges...'
 
 function Enable-BBRv2 {
    # Use "Get-NetTCPSetting | Select SettingName, CongestionProvider" to get current settings
+	 netsh int tcp set supplemental Template=Internet CongestionProvider=bbr2
+	 netsh int tcp set supplemental Template=Datacenter CongestionProvider=bbr2
+	 netsh int tcp set supplemental Template=Compat CongestionProvider=bbr2
+	 netsh int tcp set supplemental Template=DatacenterCustom CongestionProvider=bbr2
+	 netsh int tcp set supplemental Template=InternetCustom CongestionProvider=bbr2
 
    Set-NetTCPSetting -SettingName "Internet" -CongestionProvider BBR2
    Set-NetTCPSetting -SettingName "Datacenter" -CongestionProvider BBR2
