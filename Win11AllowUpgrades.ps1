@@ -46,6 +46,12 @@ function Enable-Win11Upgrade {
       New-Item 'HKLM:\SYSTEM\Setup\MoSetup' -Force | Out-Null
    }
    New-ItemProperty -path 'HKLM:\SYSTEM\Setup\MoSetup' -name 'AllowUpgradesWithUnsupportedTPMOrCPU' -value '1' -PropertyType 'DWord' -Force | Out-Null
+
+   If (!(Test-Path 'HKLM:\SYSTEM\Setup\LabConfig')) {
+      New-Item 'HKLM:\SYSTEM\Setup\LabConfig' -Force | Out-Null
+   }
+   New-ItemProperty -path 'HKLM:\SYSTEM\Setup\LabConfig' -name 'BypassTPMCheck' -value '1' -PropertyType 'DWord' -Force | Out-Null
+   New-ItemProperty -path 'HKLM:\SYSTEM\Setup\LabConfig' -name 'BypassSecureBoot' -value '1' -PropertyType 'DWord' -Force | Out-Null
 }
 
 Enable-Win11Upgrade
