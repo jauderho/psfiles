@@ -46,7 +46,9 @@ Write-Output 'Running with full privileges...'
 
 function WinPatch {
    # Check the version of Windows currently running
-   $osVersion = (Get-WmiObject -Class Win32_OperatingSystem).Caption
+   #$osVersion = (Get-WmiObject -Class Win32_OperatingSystem).Caption
+   #$osVersion = (Get-CimInstance -ClassName Win32_OperatingSystem).Caption
+   $osVersion = [System.Environment]::OSVersion.VersionString
    Write-Host "Current OS Version: $osVersion"
 
    # Check if the PSWindowsUpdate module is installed

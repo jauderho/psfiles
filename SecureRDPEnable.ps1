@@ -47,32 +47,39 @@ Get-Service -Name winRM | Set-Service -Status Running
 function Enable-SecureRDP {
    # Permit RDP to run
    # (Get-CimInstance -class "Win32_TerminalServiceSetting" -Namespace root\cimv2\terminalservices).SetAllowTSConnections(1,1) | Out-Null
-   (Get-WmiObject -class "Win32_TerminalServiceSetting" -Namespace root\cimv2\terminalservices).SetAllowTSConnections(1, 1) | Out-Null
+   #(Get-WmiObject -class "Win32_TerminalServiceSetting" -Namespace root\cimv2\terminalservices).SetAllowTSConnections(1, 1) | Out-Null
+   # Get-ItemProperty -Path "HKLM:\System\CurrentControlSet\Control\Terminal Server" -Name "fDenyTSConnections"
+   Set-ItemProperty -Path "HKLM:\System\CurrentControlSet\Control\Terminal Server" -Name "fDenyTSConnections" -Value 0
 
    # Remote Desktop Services: Enable NLA Requirement
    # (Get-CimInstance -class "Win32_TSGeneralSetting" -Namespace root\cimv2\terminalservices -Filter "TerminalName='RDP-tcp'").UserAuthenticationRequired
    # (Get-CimInstance -class "Win32_TSGeneralSetting" -Namespace root\cimv2\terminalservices -Filter "TerminalName='RDP-tcp'").SetUserAuthenticationRequired(1) | Out-Null
-   (Get-WmiObject -class "Win32_TSGeneralSetting" -Namespace root\cimv2\terminalservices -Filter "TerminalName='RDP-tcp'").SetUserAuthenticationRequired(1) | Out-Null
+   #(Get-WmiObject -class "Win32_TSGeneralSetting" -Namespace root\cimv2\terminalservices -Filter "TerminalName='RDP-tcp'").SetUserAuthenticationRequired(1) | Out-Null
+   Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -Name "UserAuthentication" -Value 1
 
    # Remote Desktop Services: Require 'High' level of encryption
    # (Get-CimInstance -class "Win32_TSGeneralSetting" -Namespace root\cimv2\terminalservices -Filter "TerminalName='RDP-tcp'").MinEncryptionLevel
    # (Get-CimInstance -class "Win32_TSGeneralSetting" -Namespace root\cimv2\terminalservices -Filter "TerminalName='RDP-tcp'").SetEncryptionLevel(3) | Out-Null
-   (Get-WmiObject -class "Win32_TSGeneralSetting" -Namespace root\cimv2\terminalservices -Filter "TerminalName='RDP-tcp'").SetEncryptionLevel(3) | Out-Null
+   #(Get-WmiObject -class "Win32_TSGeneralSetting" -Namespace root\cimv2\terminalservices -Filter "TerminalName='RDP-tcp'").SetEncryptionLevel(3) | Out-Null
+   Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -Name "MinEncryptionLevel" -Value 3
 
    # Remote Desktop Services: Set Security Layer to SSL
    # (Get-CimInstance -class "Win32_TSGeneralSetting" -Namespace root\cimv2\terminalservices -Filter "TerminalName='RDP-tcp'").SecurityLayer
    # (Get-CimInstance -class "Win32_TSGeneralSetting" -Namespace root\cimv2\terminalservices -Filter "TerminalName='RDP-tcp'").SetSecurityLayer(2) | Out-Null
-   (Get-WmiObject -class "Win32_TSGeneralSetting" -Namespace root\cimv2\terminalservices -Filter "TerminalName='RDP-tcp'").SetSecurityLayer(2) | Out-Null
-
-   # Allow RDP connections
-   # Get-ItemProperty -Path "HKLM:\System\CurrentControlSet\Control\Terminal Server" -Name "fDenyTSConnections"
-   Set-ItemProperty -Path "HKLM:\System\CurrentControlSet\Control\Terminal Server" -Name "fDenyTSConnections" -Value 0
+   #(Get-WmiObject -class "Win32_TSGeneralSetting" -Namespace root\cimv2\terminalservices -Filter "TerminalName='RDP-tcp'").SetSecurityLayer(2) | Out-Null
+   Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -Name "SecurityLayer" -Value 2
 
    # Workaround for Error Code 0x4. Check Windows TLS config as a possible source of error
+   # Set Max Outstanding Connections
    # Get-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server" -Name "MaxOutstandingConnections"
+   Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server" -Name "MaxOutstandingConnections" -Type DWord 10000
+
+
+   # Restart the Terminal Services service to apply changes
+   Restart-Service -Name TermService -Force
    Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server" -Name "MaxOutstandingConnections" -Type DWord 10000
 }
 
 Enable-SecureRDP
 
-Write-Output 'RDP secured...'
+Write-Output 'RDP security settings successfully configured...'
