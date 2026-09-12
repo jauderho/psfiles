@@ -16,6 +16,10 @@
 
      1. Remove the individual superseded packages one at a time, in small transactions.
      2. Then run plain StartComponentCleanup, which now has far less to do.
+     3. If that succeeds, verify the result with DISM /Cleanup-Image /RestoreHealth and
+        then sfc /scannow. RestoreHealth comes first on purpose: sfc repairs system files
+        using the component store as its source, so the store has to be sound before sfc
+        can do anything useful. Use -SkipPostCleanupRepair to turn this off.
 
    The documented practitioner workflow is exactly this pairing: remove the package that
    is jamming cleanup, then run cleanup to recover the space. If you only run step 1 you
@@ -168,6 +172,15 @@
    Global wall-clock budget. Default 8. The run stops cleanly at the next package boundary
    once exceeded.
 
+.PARAMETER SkipPostCleanupRepair
+   Do not run the verification pass after a successful StartComponentCleanup. By default,
+   once cleanup genuinely completes, the script runs DISM /Cleanup-Image /RestoreHealth and
+   then sfc /scannow, in that order. Neither removes anything, but both are long, so this
+   switch turns them off.
+
+.PARAMETER RepairTimeoutMinutes
+   Timeout for each of RestoreHealth and sfc in the verification pass. Default 120.
+
 .PARAMETER ScratchDirectory
    An existing local directory for DISM's working files, passed as /ScratchDir. By default
    DISM stages under %WINDIR%\Temp, on the same volume as the component store, which is the
@@ -300,6 +313,9 @@ param(
     [ValidateRange(0, 10000)]
     [int]$StopWhenFreeSpaceGB = 0,
     [switch]$ReclaimLogSpace,
+    [switch]$SkipPostCleanupRepair,
+    [ValidateRange(1, 1440)]
+    [int]$RepairTimeoutMinutes = 120,
     [string]$LogDirectory = (Join-Path $env:SystemRoot 'Logs\ComponentCleanup')
 )
 
@@ -552,7 +568,12 @@ function Show-OptionDialog {
 
     $form = New-Object Windows.Forms.Form
     $form.Text = 'Component Cleanup'
-    $form.ClientSize = New-Object Drawing.Size(520, 736)
+    # Tall form. Cap it to the usable screen height and let it scroll, so it still works on
+    # a laptop display rather than pushing the buttons off the bottom.
+    $wanted = 760
+    $available = [Windows.Forms.Screen]::PrimaryScreen.WorkingArea.Height - 60
+    $form.ClientSize = New-Object Drawing.Size(520, [Math]::Min($wanted, $available))
+    $form.AutoScroll = $true
     $form.StartPosition = 'CenterScreen'
     $form.FormBorderStyle = 'FixedDialog'
     $form.MaximizeBox = $false
@@ -591,7 +612,7 @@ function Show-OptionDialog {
     $actionBox = New-Object Windows.Forms.GroupBox
     $actionBox.Text = 'What to do'
     $actionBox.Location = New-Object Drawing.Point(12, 140)
-    $actionBox.Size = New-Object Drawing.Size(496, 156)
+    $actionBox.Size = New-Object Drawing.Size(496, 180)
     $form.Controls.Add($actionBox)
 
     $chkTask = New-Object Windows.Forms.CheckBox
@@ -622,14 +643,21 @@ function Show-OptionDialog {
     $chkReclaimLogs.Checked = [bool]$ReclaimLogSpace
     $actionBox.Controls.Add($chkReclaimLogs)
 
+    $chkRepair = New-Object Windows.Forms.CheckBox
+    $chkRepair.Text = 'After a successful cleanup, run RestoreHealth then sfc (slow)'
+    $chkRepair.Location = New-Object Drawing.Point(15, 116)
+    $chkRepair.Size = New-Object Drawing.Size(465, 22)
+    $chkRepair.Checked = -not $SkipPostCleanupRepair
+    $actionBox.Controls.Add($chkRepair)
+
     $labelMax = New-Object Windows.Forms.Label
     $labelMax.Text = 'Stop after this many removals (0 = no limit):'
-    $labelMax.Location = New-Object Drawing.Point(15, 122)
+    $labelMax.Location = New-Object Drawing.Point(15, 146)
     $labelMax.Size = New-Object Drawing.Size(360, 22)
     $actionBox.Controls.Add($labelMax)
 
     $numMax = New-Object Windows.Forms.NumericUpDown
-    $numMax.Location = New-Object Drawing.Point(400, 120)
+    $numMax.Location = New-Object Drawing.Point(400, 144)
     $numMax.Size = New-Object Drawing.Size(80, 22)
     $numMax.Minimum = 0
     $numMax.Maximum = 10000
@@ -639,7 +667,7 @@ function Show-OptionDialog {
     # --- Disk space ---------------------------------------------------------
     $spaceBox = New-Object Windows.Forms.GroupBox
     $spaceBox.Text = 'Disk space'
-    $spaceBox.Location = New-Object Drawing.Point(12, 304)
+    $spaceBox.Location = New-Object Drawing.Point(12, 328)
     $spaceBox.Size = New-Object Drawing.Size(496, 162)
     $form.Controls.Add($spaceBox)
 
@@ -706,7 +734,7 @@ function Show-OptionDialog {
     # --- Overrides ----------------------------------------------------------
     $overrideBox = New-Object Windows.Forms.GroupBox
     $overrideBox.Text = 'Overrides - these reduce the safety margin'
-    $overrideBox.Location = New-Object Drawing.Point(12, 474)
+    $overrideBox.Location = New-Object Drawing.Point(12, 498)
     $overrideBox.Size = New-Object Drawing.Size(496, 106)
     $form.Controls.Add($overrideBox)
 
@@ -733,7 +761,7 @@ function Show-OptionDialog {
 
     $chkVerbose = New-Object Windows.Forms.CheckBox
     $chkVerbose.Text = 'Verbose output - show every DISM command and step in detail'
-    $chkVerbose.Location = New-Object Drawing.Point(15, 588)
+    $chkVerbose.Location = New-Object Drawing.Point(15, 612)
     $chkVerbose.Size = New-Object Drawing.Size(493, 22)
     # Checked by default: these runs are long and mostly silent otherwise, and the
     # step-by-step detail is what makes a failure diagnosable afterwards. An explicit
@@ -745,14 +773,14 @@ function Show-OptionDialog {
     $form.Controls.Add($chkVerbose)
 
     $notice = New-Object Windows.Forms.Label
-    $notice.Location = New-Object Drawing.Point(12, 616)
+    $notice.Location = New-Object Drawing.Point(12, 640)
     $notice.Size = New-Object Drawing.Size(496, 62)
     $notice.ForeColor = [Drawing.Color]::FromArgb(150, 20, 20)
     $form.Controls.Add($notice)
 
     $buttonRun = New-Object Windows.Forms.Button
     $buttonRun.Text = 'Run'
-    $buttonRun.Location = New-Object Drawing.Point(322, 694)
+    $buttonRun.Location = New-Object Drawing.Point(322, 718)
     $buttonRun.Size = New-Object Drawing.Size(90, 28)
     $buttonRun.DialogResult = [Windows.Forms.DialogResult]::OK
     $form.Controls.Add($buttonRun)
@@ -760,7 +788,7 @@ function Show-OptionDialog {
 
     $buttonCancel = New-Object Windows.Forms.Button
     $buttonCancel.Text = 'Cancel'
-    $buttonCancel.Location = New-Object Drawing.Point(418, 694)
+    $buttonCancel.Location = New-Object Drawing.Point(418, 718)
     $buttonCancel.Size = New-Object Drawing.Size(90, 28)
     $buttonCancel.DialogResult = [Windows.Forms.DialogResult]::Cancel
     $form.Controls.Add($buttonCancel)
@@ -784,6 +812,9 @@ function Show-OptionDialog {
         $numMax.Enabled = $executing -and -not $taskMode
         $labelMax.Enabled = $numMax.Enabled
         $chkInstaller.Enabled = -not $taskMode
+
+        # The verification pass only runs after a cleanup this script performed.
+        $chkRepair.Enabled = $executing -and -not $taskMode -and -not $chkSkipCleanup.Checked
 
         # The log reclaim reports in dry run and acts in execute, so it is always offered.
         $chkReclaimLogs.Enabled = -not $taskMode
@@ -841,6 +872,7 @@ function Show-OptionDialog {
         $script:SkipFinalCleanup = [switch]($chkSkipCleanup.Enabled -and $chkSkipCleanup.Checked)
         $script:IncludeInstallerCache = [switch]($chkInstaller.Enabled -and $chkInstaller.Checked)
         $script:ReclaimLogSpace = [switch]($chkReclaimLogs.Enabled -and $chkReclaimLogs.Checked)
+        $script:SkipPostCleanupRepair = [switch](-not ($chkRepair.Enabled -and $chkRepair.Checked))
         $script:NonInteractive = [switch]($chkNonInteractive.Enabled -and $chkNonInteractive.Checked)
         $script:IgnoreAdvisories = [switch]($chkIgnore.Enabled -and $chkIgnore.Checked)
         $script:SkipRestorePoint = [switch]($chkNoRestore.Enabled -and $chkNoRestore.Checked)
@@ -1100,17 +1132,13 @@ function Get-DismProgressPercent {
 
 function Invoke-Dism {
     <#
-        Runs dism.exe out of process so a hung RPC channel cannot hang this script.
-        Returns the exit code, the captured output, and whether the timeout fired.
+        Runs dism.exe with the scratch directory applied. See Invoke-Native for the
+        process handling.
     #>
     param(
         [Parameter(Mandatory = $true)][string[]]$Arguments,
         [Parameter(Mandatory = $true)][int]$LimitMinutes
     )
-
-    $stdout = [IO.Path]::GetTempFileName()
-    $stderr = [IO.Path]::GetTempFileName()
-    $dism = Join-Path $env:SystemRoot 'System32\dism.exe'
 
     # DISM stages its working files under %WINDIR%\Temp by default, on the same volume as
     # the component store. On a machine that is short of space that is exactly the wrong
@@ -1119,10 +1147,26 @@ function Invoke-Dism {
         $Arguments = $Arguments + @(('/ScratchDir:{0}' -f $ScratchDirectory))
     }
 
-    Write-Verbose ('dism.exe {0}' -f ($Arguments -join ' '))
+    return Invoke-Native -FilePath (Join-Path $env:SystemRoot 'System32\dism.exe') -Arguments $Arguments -LimitMinutes $LimitMinutes
+}
+
+function Invoke-Native {
+    <#
+        Runs an executable out of process so a hung RPC channel cannot hang this script.
+        Returns the exit code, the captured output, and whether the timeout fired.
+    #>
+    param(
+        [Parameter(Mandatory = $true)][string]$FilePath,
+        [Parameter(Mandatory = $true)][string[]]$Arguments,
+        [Parameter(Mandatory = $true)][int]$LimitMinutes
+    )
+
+    $stdout = [IO.Path]::GetTempFileName()
+    $stderr = [IO.Path]::GetTempFileName()
+    Write-Verbose ('{0} {1}' -f (Split-Path -Leaf $FilePath), ($Arguments -join ' '))
 
     try {
-        $process = Start-Process -FilePath $dism -ArgumentList $Arguments -PassThru -WindowStyle Hidden `
+        $process = Start-Process -FilePath $FilePath -ArgumentList $Arguments -PassThru -WindowStyle Hidden `
             -RedirectStandardOutput $stdout -RedirectStandardError $stderr
 
         # Touching Handle forces the object to cache the process handle. Without this,
@@ -1162,7 +1206,7 @@ function Invoke-Dism {
         $code = $script:ExitTimedOut
 
         if ($timedOut) {
-            Write-Log ('DISM exceeded the {0} minute limit. Terminating the client.' -f $LimitMinutes) -Level Bad
+            Write-Log ('{0} exceeded the {1} minute limit. Terminating it.' -f (Split-Path -Leaf $FilePath), $LimitMinutes) -Level Bad
             try { $process.Kill() } catch { Write-Verbose $_.Exception.Message }
             $process.WaitForExit(30000) | Out-Null
         }
@@ -1180,7 +1224,7 @@ function Invoke-Dism {
                 if ($content) { $output += $content }
             }
             catch {
-                Write-Verbose ('Could not read DISM output: {0}' -f $_.Exception.Message)
+                Write-Verbose ('Could not read output: {0}' -f $_.Exception.Message)
             }
         }
 
@@ -1531,6 +1575,75 @@ function Remove-SupersededPackage {
     return 'Failed'
 }
 
+function Invoke-PostCleanupRepair {
+    <#
+        Verification pass, run only after StartComponentCleanup has genuinely completed.
+
+        DISM RestoreHealth runs BEFORE sfc, not after. SFC repairs system files using the
+        component store as its source, so a damaged store leaves it unable to fix anything.
+        RestoreHealth repairs the store first, which gives SFC a healthy source to work
+        from. Running sfc first is the common way round and it is the wrong one.
+
+        Both are long. Neither is destructive, and both are skipped when cleanup asked for
+        a reboot, because servicing a store with a pending transaction is exactly what this
+        script spends its time avoiding.
+    #>
+    Write-Log '' -Level Info
+    Write-Log 'Post-cleanup verification' -Level Step
+    Write-Log 'Cleanup succeeded, so the store is now verified and repaired if needed.'
+    Write-Log ('Each step has a {0} minute limit. Both are read-mostly and neither removes anything.' -f $RepairTimeoutMinutes)
+
+    # 1. Repair the component store first, so SFC has a good source.
+    if ($PSCmdlet.ShouldProcess('component store', 'DISM /Cleanup-Image /RestoreHealth')) {
+        Write-Log 'Running DISM /Online /Cleanup-Image /RestoreHealth...' -Level Step
+
+        $restore = Invoke-Dism -LimitMinutes $RepairTimeoutMinutes -Arguments @(
+            '/Online', '/English', '/NoRestart', '/Cleanup-Image', '/RestoreHealth'
+        )
+
+        if ($restore.ExitCode -eq 0) {
+            Write-Log 'RestoreHealth completed. The component store is repairable and repaired.' -Level Good
+        }
+        elseif ($restore.ExitCode -eq $script:ExitRebootRequired) {
+            Write-Log 'RestoreHealth completed and requires a reboot. Skipping sfc until after it.' -Level Warn
+            return $script:ExitRebootRequired
+        }
+        else {
+            Write-Log ('RestoreHealth returned {0}.' -f (Get-DismExitCodeName $restore.ExitCode)) -Level Bad
+            if ($restore.Output) { Write-Log $restore.Output }
+            Write-Log 'If it could not find source files, rerun with matching install media:' -Level Warn
+            Write-Log '  DISM /Online /Cleanup-Image /RestoreHealth /Source:WIM:D:\sources\install.wim:1 /LimitAccess' -Level Warn
+            Write-Log 'Running sfc anyway, since it may still repair what it can.' -Level Warn
+        }
+    }
+
+    # 2. Then the system files, now that the store behind them is sound.
+    if ($PSCmdlet.ShouldProcess('system files', 'sfc /scannow')) {
+        Write-Log 'Running sfc /scannow...' -Level Step
+
+        $sfc = Invoke-Native -FilePath (Join-Path $env:SystemRoot 'System32\sfc.exe') -Arguments @('/scannow') -LimitMinutes $RepairTimeoutMinutes
+
+        # sfc writes UTF-16 to the console, so the redirected capture is not worth parsing.
+        # The exit code plus CBS.log is the reliable record.
+        if ($sfc.TimedOut) {
+            Write-Log ('sfc did not finish within {0} minutes.' -f $RepairTimeoutMinutes) -Level Bad
+            return 1
+        }
+
+        if ($sfc.ExitCode -eq 0) {
+            Write-Log 'sfc completed.' -Level Good
+        }
+        else {
+            Write-Log ('sfc returned {0}.' -f $sfc.ExitCode) -Level Warn
+        }
+
+        Write-Log ('For what sfc actually found, read {0}' -f (Join-Path $env:SystemRoot 'Logs\CBS\CBS.log'))
+        Write-Log '  findstr /c:"[SR]" %SystemRoot%\Logs\CBS\CBS.log > "%USERPROFILE%\Desktop\sfcdetails.txt"'
+    }
+
+    return 0
+}
+
 function Invoke-FinalComponentCleanup {
     <#
         The step that actually reclaims the bytes. Plain StartComponentCleanup only -
@@ -1567,11 +1680,22 @@ function Invoke-FinalComponentCleanup {
 
     if ($result.ExitCode -eq 0) {
         Write-Log 'StartComponentCleanup completed.' -Level Good
-        return 0
+
+        if ($SkipPostCleanupRepair) {
+            Write-Log 'Post-cleanup verification skipped by request.' -Level Warn
+            Write-Log 'Run these yourself when convenient, in this order:'
+            Write-Log '  DISM /Online /Cleanup-Image /RestoreHealth'
+            Write-Log '  sfc /scannow'
+            return 0
+        }
+
+        return Invoke-PostCleanupRepair
     }
 
     if ($result.ExitCode -eq $script:ExitRebootRequired) {
         Write-Log 'StartComponentCleanup completed and requires a reboot.' -Level Good
+        Write-Log 'Skipping the post-cleanup verification. Servicing a store with a pending transaction is unsafe.' -Level Warn
+        Write-Log 'Reboot, then run: DISM /Online /Cleanup-Image /RestoreHealth   followed by   sfc /scannow' -Level Warn
         return $script:ExitRebootRequired
     }
 
