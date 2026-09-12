@@ -27,6 +27,9 @@ jobs:
     - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       with:
         fetch-depth: 0
+        # The sync step authenticates to GitLab with GITLAB_TOKEN, so the GitHub
+        # credentials do not need to persist in .git/config.
+        persist-credentials: false
         
     - uses: jauderho/git-repo-sync@6142c9cd8960dadc57d1190506d6c35ac5cee660 # v0.3.0
       with:
