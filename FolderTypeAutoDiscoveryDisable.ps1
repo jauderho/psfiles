@@ -1,7 +1,7 @@
 
 <#
 .SYNOPSIS
-   Disabe folder type auto discovery
+   Disable folder type auto discovery
 
 .DESCRIPTION
    Speed things up by disabling folder type auto discovery
