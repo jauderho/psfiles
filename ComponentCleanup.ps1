@@ -550,6 +550,10 @@ function Show-OptionDialog {
         Presents the run options and writes the operator's choices back into the script
         scope parameter variables. Returns $false if the operator cancelled.
 
+        Laid out in two columns. A single column ran past 760 pixels once the disk space
+        options were added, which pushes the buttons off a laptop display; side by side it
+        fits in under 500 and groups related settings together.
+
         Invalid combinations are made unreachable by enabling and disabling controls rather
         than by rejecting the form afterwards, and Test-ParameterCombination still runs as
         a backstop.
@@ -568,29 +572,26 @@ function Show-OptionDialog {
 
     $form = New-Object Windows.Forms.Form
     $form.Text = 'Component Cleanup'
-    # Tall form. Cap it to the usable screen height and let it scroll, so it still works on
-    # a laptop display rather than pushing the buttons off the bottom.
-    $wanted = 760
-    $available = [Windows.Forms.Screen]::PrimaryScreen.WorkingArea.Height - 60
-    $form.ClientSize = New-Object Drawing.Size(520, [Math]::Min($wanted, $available))
-    $form.AutoScroll = $true
+    $form.ClientSize = New-Object Drawing.Size(1032, 480)
     $form.StartPosition = 'CenterScreen'
     $form.FormBorderStyle = 'FixedDialog'
     $form.MaximizeBox = $false
     $form.MinimizeBox = $false
     # The UAC transition can leave a new window behind the console otherwise.
     $form.Topmost = $true
+    # Cheap insurance if this ever grows again.
+    $form.AutoScroll = $true
 
     $intro = New-Object Windows.Forms.Label
     $intro.Location = New-Object Drawing.Point(12, 12)
-    $intro.Size = New-Object Drawing.Size(496, 40)
+    $intro.Size = New-Object Drawing.Size(1008, 32)
     $intro.Text = "Removes superseded component packages one at a time, then runs StartComponentCleanup to reclaim the space.`r`nStart with a dry run, or with the scheduled task, before executing."
     $form.Controls.Add($intro)
 
-    # --- Mode ---------------------------------------------------------------
+    # === Left column ========================================================
     $modeBox = New-Object Windows.Forms.GroupBox
     $modeBox.Text = 'Mode'
-    $modeBox.Location = New-Object Drawing.Point(12, 56)
+    $modeBox.Location = New-Object Drawing.Point(12, 52)
     $modeBox.Size = New-Object Drawing.Size(496, 76)
     $form.Controls.Add($modeBox)
 
@@ -608,10 +609,9 @@ function Show-OptionDialog {
     $radioExecute.Checked = [bool]$Execute
     $modeBox.Controls.Add($radioExecute)
 
-    # --- What to do ---------------------------------------------------------
     $actionBox = New-Object Windows.Forms.GroupBox
     $actionBox.Text = 'What to do'
-    $actionBox.Location = New-Object Drawing.Point(12, 140)
+    $actionBox.Location = New-Object Drawing.Point(12, 136)
     $actionBox.Size = New-Object Drawing.Size(496, 180)
     $form.Controls.Add($actionBox)
 
@@ -664,39 +664,39 @@ function Show-OptionDialog {
     $numMax.Value = $MaxPackages
     $actionBox.Controls.Add($numMax)
 
-    # --- Disk space ---------------------------------------------------------
+    # === Right column =======================================================
     $spaceBox = New-Object Windows.Forms.GroupBox
     $spaceBox.Text = 'Disk space'
-    $spaceBox.Location = New-Object Drawing.Point(12, 328)
-    $spaceBox.Size = New-Object Drawing.Size(496, 162)
+    $spaceBox.Location = New-Object Drawing.Point(520, 52)
+    $spaceBox.Size = New-Object Drawing.Size(500, 162)
     $form.Controls.Add($spaceBox)
 
     $labelScratch = New-Object Windows.Forms.Label
     $labelScratch.Text = 'DISM working directory, ideally on another volume:'
     $labelScratch.Location = New-Object Drawing.Point(15, 20)
-    $labelScratch.Size = New-Object Drawing.Size(465, 20)
+    $labelScratch.Size = New-Object Drawing.Size(470, 20)
     $spaceBox.Controls.Add($labelScratch)
 
     $txtScratch = New-Object Windows.Forms.TextBox
     $txtScratch.Location = New-Object Drawing.Point(15, 42)
-    $txtScratch.Size = New-Object Drawing.Size(378, 22)
+    $txtScratch.Size = New-Object Drawing.Size(382, 22)
     $txtScratch.Text = [string]$ScratchDirectory
     $spaceBox.Controls.Add($txtScratch)
 
     $btnBrowse = New-Object Windows.Forms.Button
     $btnBrowse.Text = 'Browse...'
-    $btnBrowse.Location = New-Object Drawing.Point(399, 41)
+    $btnBrowse.Location = New-Object Drawing.Point(403, 41)
     $btnBrowse.Size = New-Object Drawing.Size(81, 24)
     $spaceBox.Controls.Add($btnBrowse)
 
     $labelMin = New-Object Windows.Forms.Label
     $labelMin.Text = 'Stop if free space falls below (GB):'
     $labelMin.Location = New-Object Drawing.Point(15, 76)
-    $labelMin.Size = New-Object Drawing.Size(360, 22)
+    $labelMin.Size = New-Object Drawing.Size(370, 22)
     $spaceBox.Controls.Add($labelMin)
 
     $numMin = New-Object Windows.Forms.NumericUpDown
-    $numMin.Location = New-Object Drawing.Point(400, 74)
+    $numMin.Location = New-Object Drawing.Point(404, 74)
     $numMin.Size = New-Object Drawing.Size(80, 22)
     $numMin.Minimum = 1
     $numMin.Maximum = 100
@@ -706,11 +706,11 @@ function Show-OptionDialog {
     $labelEvery = New-Object Windows.Forms.Label
     $labelEvery.Text = 'Reclaim space every N removals (0 = only at end):'
     $labelEvery.Location = New-Object Drawing.Point(15, 104)
-    $labelEvery.Size = New-Object Drawing.Size(360, 22)
+    $labelEvery.Size = New-Object Drawing.Size(370, 22)
     $spaceBox.Controls.Add($labelEvery)
 
     $numEvery = New-Object Windows.Forms.NumericUpDown
-    $numEvery.Location = New-Object Drawing.Point(400, 102)
+    $numEvery.Location = New-Object Drawing.Point(404, 102)
     $numEvery.Size = New-Object Drawing.Size(80, 22)
     $numEvery.Minimum = 0
     $numEvery.Maximum = 10000
@@ -720,49 +720,49 @@ function Show-OptionDialog {
     $labelStop = New-Object Windows.Forms.Label
     $labelStop.Text = 'Stop once free space reaches (GB, 0 = run all):'
     $labelStop.Location = New-Object Drawing.Point(15, 132)
-    $labelStop.Size = New-Object Drawing.Size(360, 22)
+    $labelStop.Size = New-Object Drawing.Size(370, 22)
     $spaceBox.Controls.Add($labelStop)
 
     $numStop = New-Object Windows.Forms.NumericUpDown
-    $numStop.Location = New-Object Drawing.Point(400, 130)
+    $numStop.Location = New-Object Drawing.Point(404, 130)
     $numStop.Size = New-Object Drawing.Size(80, 22)
     $numStop.Minimum = 0
     $numStop.Maximum = 10000
     $numStop.Value = $StopWhenFreeSpaceGB
     $spaceBox.Controls.Add($numStop)
 
-    # --- Overrides ----------------------------------------------------------
     $overrideBox = New-Object Windows.Forms.GroupBox
     $overrideBox.Text = 'Overrides - these reduce the safety margin'
-    $overrideBox.Location = New-Object Drawing.Point(12, 498)
-    $overrideBox.Size = New-Object Drawing.Size(496, 106)
+    $overrideBox.Location = New-Object Drawing.Point(520, 222)
+    $overrideBox.Size = New-Object Drawing.Size(500, 94)
     $form.Controls.Add($overrideBox)
 
     $chkNonInteractive = New-Object Windows.Forms.CheckBox
     $chkNonInteractive.Text = 'Do not ask again per package'
-    $chkNonInteractive.Location = New-Object Drawing.Point(15, 22)
-    $chkNonInteractive.Size = New-Object Drawing.Size(465, 22)
+    $chkNonInteractive.Location = New-Object Drawing.Point(15, 18)
+    $chkNonInteractive.Size = New-Object Drawing.Size(470, 22)
     $chkNonInteractive.Checked = [bool]$NonInteractive
     $overrideBox.Controls.Add($chkNonInteractive)
 
     $chkIgnore = New-Object Windows.Forms.CheckBox
     $chkIgnore.Text = 'Continue past advisory warnings (never overrides a hard stop)'
-    $chkIgnore.Location = New-Object Drawing.Point(15, 48)
-    $chkIgnore.Size = New-Object Drawing.Size(465, 22)
+    $chkIgnore.Location = New-Object Drawing.Point(15, 42)
+    $chkIgnore.Size = New-Object Drawing.Size(470, 22)
     $chkIgnore.Checked = [bool]$IgnoreAdvisories
     $overrideBox.Controls.Add($chkIgnore)
 
     $chkNoRestore = New-Object Windows.Forms.CheckBox
     $chkNoRestore.Text = 'Do not attempt a system restore point'
-    $chkNoRestore.Location = New-Object Drawing.Point(15, 74)
-    $chkNoRestore.Size = New-Object Drawing.Size(465, 22)
+    $chkNoRestore.Location = New-Object Drawing.Point(15, 66)
+    $chkNoRestore.Size = New-Object Drawing.Size(470, 22)
     $chkNoRestore.Checked = [bool]$SkipRestorePoint
     $overrideBox.Controls.Add($chkNoRestore)
 
+    # === Full width =========================================================
     $chkVerbose = New-Object Windows.Forms.CheckBox
     $chkVerbose.Text = 'Verbose output - show every DISM command and step in detail'
-    $chkVerbose.Location = New-Object Drawing.Point(15, 612)
-    $chkVerbose.Size = New-Object Drawing.Size(493, 22)
+    $chkVerbose.Location = New-Object Drawing.Point(15, 328)
+    $chkVerbose.Size = New-Object Drawing.Size(1005, 22)
     # Checked by default: these runs are long and mostly silent otherwise, and the
     # step-by-step detail is what makes a failure diagnosable afterwards. An explicit
     # -Verbose:$false on the command line still wins.
@@ -773,14 +773,14 @@ function Show-OptionDialog {
     $form.Controls.Add($chkVerbose)
 
     $notice = New-Object Windows.Forms.Label
-    $notice.Location = New-Object Drawing.Point(12, 640)
-    $notice.Size = New-Object Drawing.Size(496, 62)
+    $notice.Location = New-Object Drawing.Point(12, 356)
+    $notice.Size = New-Object Drawing.Size(1008, 72)
     $notice.ForeColor = [Drawing.Color]::FromArgb(150, 20, 20)
     $form.Controls.Add($notice)
 
     $buttonRun = New-Object Windows.Forms.Button
     $buttonRun.Text = 'Run'
-    $buttonRun.Location = New-Object Drawing.Point(322, 718)
+    $buttonRun.Location = New-Object Drawing.Point(834, 438)
     $buttonRun.Size = New-Object Drawing.Size(90, 28)
     $buttonRun.DialogResult = [Windows.Forms.DialogResult]::OK
     $form.Controls.Add($buttonRun)
@@ -788,7 +788,7 @@ function Show-OptionDialog {
 
     $buttonCancel = New-Object Windows.Forms.Button
     $buttonCancel.Text = 'Cancel'
-    $buttonCancel.Location = New-Object Drawing.Point(418, 718)
+    $buttonCancel.Location = New-Object Drawing.Point(930, 438)
     $buttonCancel.Size = New-Object Drawing.Size(90, 28)
     $buttonCancel.DialogResult = [Windows.Forms.DialogResult]::Cancel
     $form.Controls.Add($buttonCancel)
@@ -813,11 +813,11 @@ function Show-OptionDialog {
         $labelMax.Enabled = $numMax.Enabled
         $chkInstaller.Enabled = -not $taskMode
 
-        # The verification pass only runs after a cleanup this script performed.
-        $chkRepair.Enabled = $executing -and -not $taskMode -and -not $chkSkipCleanup.Checked
-
         # The log reclaim reports in dry run and acts in execute, so it is always offered.
         $chkReclaimLogs.Enabled = -not $taskMode
+
+        # The verification pass only runs after a cleanup this script performed.
+        $chkRepair.Enabled = $executing -and -not $taskMode -and -not $chkSkipCleanup.Checked
 
         # Nothing in the disk space group applies to a dry run, because no DISM servicing
         # call is made and nothing is removed.
@@ -843,6 +843,9 @@ function Show-OptionDialog {
             if ($chkSkipCleanup.Checked) {
                 $lines += 'Skipping the final cleanup means almost no disk space will be reclaimed.'
             }
+            elseif ($chkRepair.Checked) {
+                $lines += 'After a successful cleanup, RestoreHealth and sfc both run. Together they can take well over an hour.'
+            }
         }
         else {
             $lines += 'Dry run. Nothing will be changed.'
@@ -860,6 +863,7 @@ function Show-OptionDialog {
     $chkTask.Add_CheckedChanged($refresh)
     $chkSkipCleanup.Add_CheckedChanged($refresh)
     $chkInstaller.Add_CheckedChanged($refresh)
+    $chkRepair.Add_CheckedChanged($refresh)
     & $refresh
 
     $answer = $form.ShowDialog()
