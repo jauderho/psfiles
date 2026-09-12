@@ -1095,9 +1095,9 @@ function Show-SecuritySoftwareEvidence {
             Write-Log ('{0}' -f $product.displayName)
         }
 
-        $thirdParty = @($products | Where-Object { $_.displayName -notmatch '(?i)Windows Defender|Microsoft Defender' })
-        if ($thirdParty.Count -gt 0) {
-            $findings += ('Third party security software is installed ({0}). Real time scanning of WinSxS is a known cause of servicing failures. If everything else here fails, temporarily disabling it and retrying is worth a try. This script will not disable it for you.' -f (($thirdParty | ForEach-Object { $_.displayName }) -join ', '))
+        $nonDefender = @($products | Where-Object { $_.displayName -notmatch '(?i)Windows Defender|Microsoft Defender' })
+        if ($nonDefender.Count -gt 0) {
+            $findings += ('Third party security software is installed ({0}). Real time scanning of WinSxS is a known cause of servicing failures. If everything else here fails, temporarily disabling it and retrying is worth a try. This script will not disable it for you.' -f (($nonDefender | ForEach-Object { $_.displayName }) -join ', '))
         }
     }
     catch {

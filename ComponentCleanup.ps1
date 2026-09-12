@@ -1221,7 +1221,7 @@ function Split-PackageIdentity {
         Package identities are Name~PublicKeyToken~Architecture~Language~Version. The
         language field is routinely empty, giving a "~~" run, which splits correctly into
         an empty element. Anything that is not five fields with a parseable version is
-        treated as unparseable and is never a candidate.
+        treated as unparsable and is never a candidate.
     #>
     param([Parameter(Mandatory = $true)][string]$PackageName)
 
@@ -1305,7 +1305,7 @@ function Select-RemovalCandidate {
             $skipped += [pscustomobject]@{
                 PackageName = $package.PackageName
                 Reason      = 'package identity could not be parsed'
-                Category    = 'unparseable identity'
+                Category    = 'unparsable identity'
             }
             continue
         }
