@@ -15,6 +15,14 @@
 .PARAMETER DryRun
    Report each change but make none. Use this first.
 
+.PARAMETER Harden
+   Cut the cipher suite list down to the AEAD suites. Drops every CBC suite and
+   every SHA-1 suite, and keeps TLS 1.3 plus the GCM suites that TLS 1.2 needs.
+
+   WARNING: this removes suites, it does not only reorder them. A peer that
+   offers nothing in the remaining set will not connect. Keep a second way in
+   to a machine you administer over the network. Always try it with -DryRun.
+
 .PARAMETER Verbose
    Emit step-level progress and the cipher order before and after. ON by
    default. Turn it off with -Verbose:$false.
@@ -26,6 +34,10 @@
 .EXAMPLE
    .\TLSv1.3Enable.ps1 -Verbose:$false
    Apply the changes quietly.
+
+.EXAMPLE
+   .\TLSv1.3Enable.ps1 -Harden -DryRun
+   Report which suites -Harden would drop, without dropping them.
 
 .NOTES
    Created by Jauder Ho
@@ -56,7 +68,8 @@
 [CmdletBinding()]
 param(
   [switch]$Elevated,
-  [switch]$DryRun
+  [switch]$DryRun,
+  [switch]$Harden
 )
 
 # Verbose is the default here. The cipher order is the point of the script and
@@ -82,6 +95,9 @@ if ((Test-Admin) -eq $false) {
     $relaunchArgs = '-noprofile -noexit -file "{0}" -elevated' -f ($myinvocation.MyCommand.Definition)
     if ($DryRun) {
       $relaunchArgs += ' -dryrun'
+    }
+    if ($Harden) {
+      $relaunchArgs += ' -harden'
     }
     # state it either way. The relaunched copy would otherwise apply its own
     # default and undo an explicit -Verbose:$false.
@@ -122,6 +138,35 @@ $script:AllTls13Names = @(
   'TLS_AES_256_GCM_SHA384'
   'TLS_AES_128_GCM_SHA256'
   'TLS_CHACHA20_POLY1305_SHA256'
+)
+
+# -Harden keeps only these. Everything else is dropped.
+#
+# The rules are: AEAD only, so no CBC; and no SHA-1, so nothing whose name ends
+# in _SHA with no digits. The remainder is TLS 1.3 plus the GCM suites that
+# TLS 1.2 still needs.
+#
+# The ECDHE_RSA pair stays even on a machine that serves an ECDSA certificate.
+# Schannel keeps one list for both roles, so removing them would stop this
+# machine reaching any TLS 1.2 server that presents an RSA certificate.
+#
+# The unsuffixed ECDSA names are the ones that work with any curve. A name that
+# ends in _P384 is pinned to P-384 and cannot serve a P-256 certificate, so the
+# unsuffixed forms are what keep an ECDSA certificate working, RDP included.
+$script:HardenedSuites = @(
+  # TLS 1.3
+  'TLS_AES_256_GCM_SHA384'
+  'TLS_AES_128_GCM_SHA256'
+  'TLS_CHACHA20_POLY1305_SHA256'
+
+  # TLS 1.2 with an ECDSA certificate. RDP negotiates TLS 1.2, not TLS 1.3.
+  'TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384'
+  'TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256_P256'
+  'TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256'
+
+  # TLS 1.2 as a client to a server with an RSA certificate
+  'TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384'
+  'TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256'
 )
 
 # the documented maximum for the SSL Cipher Suite Order policy field
@@ -169,15 +214,43 @@ function Set-Tls13GpoOrder {
     Write-Warning 'at present, whatever the protocol keys say. Adding the suites now.'
   }
 
-  # strip every TLS 1.3 name wherever it sits, then put them back on the front
-  $others = @($list | Where-Object { $_ -notin $script:AllTls13Names })
-  $new = @($wanted) + $others
+  if ($Harden) {
+    # replace the list rather than edit it. Keep only the AEAD suites, dropping
+    # every CBC suite and every SHA-1 suite.
+    $new = @($script:HardenedSuites | Where-Object {
+        ($_ -notin $script:AllTls13Names) -or ($osBuild -ge $Suites[$_])
+      })
+    $dropped = @($list | Where-Object { $_ -notin $new })
 
-  # a sanity check on the edit itself. Losing a non TLS 1.3 suite here would
-  # silently weaken or break what the policy was set up to allow.
-  if ($others.Count -ne ($list.Count - $already.Count)) {
-    Write-Error 'The edit would change the non TLS 1.3 entries. Leaving the policy alone.'
-    return
+    Write-Output "Harden: keeping $($new.Count) suite(s), dropping $($dropped.Count)."
+    foreach ($d in $dropped) {
+      $why = if ($d -match '_CBC_SHA(_|$)') { 'CBC and SHA-1' }
+      elseif ($d -match '_CBC_') { 'CBC' }
+      elseif ($d -match '_P384$') { 'pinned to P-384' }
+      else { 'not in the hardened set' }
+      Write-Verbose "  drop $d ($why)"
+    }
+
+    # An ECDSA certificate needs at least one unsuffixed ECDSA suite, because a
+    # _P384 name cannot serve a P-256 key. Without one, a listener using an
+    # ECDSA certificate stops answering, and RDP is usually that listener.
+    if (-not ($new | Where-Object { $_ -eq 'TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384' -or $_ -eq 'TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256' })) {
+      Write-Error 'The hardened set has no unsuffixed ECDSA suite. That would break an ECDSA listener.'
+      Write-Error 'Leaving the policy alone.'
+      return
+    }
+  }
+  else {
+    # strip every TLS 1.3 name wherever it sits, then put them back on the front
+    $others = @($list | Where-Object { $_ -notin $script:AllTls13Names })
+    $new = @($wanted) + $others
+
+    # a sanity check on the edit itself. Losing a non TLS 1.3 suite here would
+    # silently weaken or break what the policy was set up to allow.
+    if ($others.Count -ne ($list.Count - $already.Count)) {
+      Write-Error 'The edit would change the non TLS 1.3 entries. Leaving the policy alone.'
+      return
+    }
   }
 
   $newValue = $new -join ','
