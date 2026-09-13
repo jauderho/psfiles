@@ -44,20 +44,20 @@
    with -Verbose:$false.
 
 .EXAMPLE
-   .\Win10Debloat.ps1 -DryRun
+   .\WinDebloat.ps1 -DryRun
    Report every change without making one. Always start here.
 
 .EXAMPLE
-   .\Win10Debloat.ps1
+   .\WinDebloat.ps1
    Make a restore point, then apply the changes. Recall is removed in full,
    the snapshots on disk included.
 
 .EXAMPLE
-   .\Win10Debloat.ps1 -KeepRecallSnapshots -Verbose:$false
+   .\WinDebloat.ps1 -KeepRecallSnapshots -Verbose:$false
    Apply the changes quietly but keep the Recall snapshots on disk.
 
 .EXAMPLE
-   .\Win10Debloat.ps1 -KeepXbox -KeepTeams
+   .\WinDebloat.ps1 -KeepXbox -KeepTeams
    Remove everything except the Xbox stack and the two Teams clients.
 
 .NOTES
@@ -603,7 +603,7 @@ function New-SafetyCheckpoint {
 }
 
 $stamp = Get-Date -Format 'yyyyMMdd-HHmmss'
-$backupDir = Join-Path -Path $env:ProgramData -ChildPath "Win10Debloat\Backup\$stamp"
+$backupDir = Join-Path -Path $env:ProgramData -ChildPath "WinDebloat\Backup\$stamp"
 
 if ($DryRun) {
 	Write-Output "[dryrun] Registry backup would go to $backupDir"
@@ -624,7 +624,7 @@ if ($SkipCheckpoint) {
 }
 else {
 	Write-Output 'Creating a restore point...'
-	$checkpointMade = New-SafetyCheckpoint -Description 'Before Win10Debloat'
+	$checkpointMade = New-SafetyCheckpoint -Description 'Before WinDebloat'
 	if (-not $checkpointMade) {
 		Write-Error 'Stopping. No restore point was made.'
 		exit 1
