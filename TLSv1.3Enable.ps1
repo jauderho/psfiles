@@ -114,6 +114,146 @@ if ($osBuild -lt $script:Tls13MinimumBuild) {
   Write-Warning 'The protocol keys will be written and ignored, and no cipher suite can be ordered.'
 }
 
+# the Group Policy cipher suite order. A value here replaces the local list.
+$script:GpoSslPath = 'HKLM:\SOFTWARE\Policies\Microsoft\Cryptography\Configuration\SSL\00010002'
+
+# every TLS 1.3 suite name, used to strip old entries before they are re-added
+$script:AllTls13Names = @(
+  'TLS_AES_256_GCM_SHA384'
+  'TLS_AES_128_GCM_SHA256'
+  'TLS_CHACHA20_POLY1305_SHA256'
+)
+
+# the documented maximum for the SSL Cipher Suite Order policy field
+$script:GpoFunctionsMaxLength = 1023
+
+function Set-Tls13GpoOrder {
+  <#
+  .SYNOPSIS
+     Put the TLS 1.3 suites first in the Group Policy cipher suite order.
+
+  .DESCRIPTION
+     The policy value is a single REG_SZ of comma separated names, and it
+     replaces the operating system list rather than adding to it. A policy list
+     without a TLS 1.3 suite therefore turns TLS 1.3 off, whatever the protocol
+     keys say.
+
+     The existing list is read, edited and written back. It is never rebuilt
+     from scratch, because that would drop whatever else the policy carries.
+  #>
+  param(
+    [Parameter(Mandatory)][AllowEmptyString()][string]$Existing,
+    [Parameter(Mandatory)][System.Collections.Specialized.OrderedDictionary]$Suites
+  )
+
+  Write-Output 'A cipher suite order is set by Group Policy. Editing that list.'
+  Write-Verbose "Policy key: $script:GpoSslPath"
+
+  $list = @($Existing -split ',' | ForEach-Object { $_.Trim() } | Where-Object { $_ })
+  Write-Verbose "Policy list holds $($list.Count) suite(s), $($Existing.Length) chars"
+
+  # only the suites this build can actually use, in the preferred order
+  $wanted = @($Suites.Keys | Where-Object { $osBuild -ge $Suites[$_] })
+  $tooOld = @($Suites.Keys | Where-Object { $osBuild -lt $Suites[$_] })
+  if ($tooOld.Count -gt 0) {
+    Write-Output "Not available on build ${osBuild}: $($tooOld -join ', ')"
+  }
+  if ($wanted.Count -eq 0) {
+    Write-Warning 'No TLS 1.3 cipher suite is available on this build. Leaving the policy alone.'
+    return
+  }
+
+  $already = @($list | Where-Object { $_ -in $script:AllTls13Names })
+  if ($already.Count -eq 0) {
+    Write-Warning 'The policy list has no TLS 1.3 suite in it, so TLS 1.3 cannot be negotiated'
+    Write-Warning 'at present, whatever the protocol keys say. Adding the suites now.'
+  }
+
+  # strip every TLS 1.3 name wherever it sits, then put them back on the front
+  $others = @($list | Where-Object { $_ -notin $script:AllTls13Names })
+  $new = @($wanted) + $others
+
+  # a sanity check on the edit itself. Losing a non TLS 1.3 suite here would
+  # silently weaken or break what the policy was set up to allow.
+  if ($others.Count -ne ($list.Count - $already.Count)) {
+    Write-Error 'The edit would change the non TLS 1.3 entries. Leaving the policy alone.'
+    return
+  }
+
+  $newValue = $new -join ','
+
+  if ($newValue -eq $Existing) {
+    Write-Output 'The policy already lists the TLS 1.3 suites first. No change needed.'
+    return
+  }
+
+  if ($newValue.Length -gt $script:GpoFunctionsMaxLength) {
+    Write-Warning "The new list is $($newValue.Length) chars. The documented limit is $script:GpoFunctionsMaxLength."
+    Write-Warning 'The Group Policy editor will not accept a value this long, and Schannel may'
+    Write-Warning 'drop the tail. The TLS 1.3 suites are at the front, so they survive a trim.'
+  }
+
+  Write-Verbose "New policy list: $newValue"
+
+  if ($DryRun) {
+    Write-Output "[dryrun] Would set the policy list to $($new.Count) suites, TLS 1.3 first:"
+    Write-Output "[dryrun]   $($wanted -join ', ') then $($others.Count) existing suite(s)"
+    return
+  }
+
+  # keep a copy of the key before it is edited
+  $stamp = Get-Date -Format 'yyyyMMdd-HHmmss'
+  $backupDir = Join-Path -Path $env:ProgramData -ChildPath 'TLSv13Enable\Backup'
+  $backupFile = Join-Path -Path $backupDir -ChildPath "SSL-00010002-$stamp.reg"
+  try {
+    New-Item -Path $backupDir -ItemType Directory -Force -ErrorAction Stop | Out-Null
+    & reg.exe export 'HKLM\SOFTWARE\Policies\Microsoft\Cryptography\Configuration\SSL\00010002' $backupFile /y 2>&1 | Out-Null
+    Write-Output "Policy key backed up to $backupFile"
+  }
+  catch {
+    Write-Error "Could not back up the policy key: $($_.Exception.Message)"
+    Write-Error 'Leaving the policy alone.'
+    return
+  }
+
+  try {
+    New-ItemProperty -Path $script:GpoSslPath -Name 'Functions' -Value $newValue -PropertyType 'String' -Force -ErrorAction Stop | Out-Null
+  }
+  catch {
+    Write-Error "Could not write the policy value: $($_.Exception.Message)"
+    return
+  }
+
+  $readBack = (Get-ItemProperty -Path $script:GpoSslPath -Name 'Functions' -ErrorAction SilentlyContinue).Functions
+  if ($readBack -ne $newValue) {
+    Write-Warning 'The policy value did not read back as written.'
+    return
+  }
+
+  Write-Output "Policy list updated. TLS 1.3 first: $($wanted -join ', ')"
+
+  # A local policy owns this value through Registry.pol and puts it back at the
+  # next refresh, so the registry edit above is temporary on its own.
+  $machinePol = Join-Path -Path $env:SystemRoot -ChildPath 'System32\GroupPolicy\Machine\Registry.pol'
+  if (Test-Path -LiteralPath $machinePol) {
+    Write-Warning 'Local Group Policy is in use on this machine:'
+    Write-Warning "  $machinePol"
+    Write-Warning 'It will restore the old list at the next policy refresh or restart.'
+    Write-Warning 'To make this permanent, open gpedit.msc and set:'
+    Write-Warning '  Computer Configuration > Administrative Templates > Network >'
+    Write-Warning '  SSL Configuration Settings > SSL Cipher Suite Order'
+    Write-Warning 'Paste the list printed below into that field.'
+    Write-Output ''
+    Write-Output $newValue
+    Write-Output ''
+  }
+
+  if ((Get-CimInstance -ClassName Win32_ComputerSystem).PartOfDomain) {
+    Write-Warning 'This machine is domain joined. A domain policy that sets the same value'
+    Write-Warning 'will overwrite this edit at the next refresh. Change it in the domain GPO.'
+  }
+}
+
 function Set-TLSv13CipherPriority {
   <#
   .SYNOPSIS
@@ -144,17 +284,12 @@ function Set-TLSv13CipherPriority {
     return
   }
 
-  # A cipher suite order set by policy replaces the local list outright. An
-  # Enable-TlsCipherSuite call would then write a list that nothing reads, so
-  # say that rather than report a change which does nothing.
-  $gpoPath = 'HKLM:\SOFTWARE\Policies\Microsoft\Cryptography\Configuration\SSL\00010002'
-  $gpoFunctions = (Get-ItemProperty -Path $gpoPath -Name 'Functions' -ErrorAction SilentlyContinue).Functions
+  # A cipher suite order set by policy replaces the local list outright, so the
+  # policy list is the one that has to change. Enable-TlsCipherSuite writes the
+  # local list, which nothing would read while the policy is in place.
+  $gpoFunctions = (Get-ItemProperty -Path $script:GpoSslPath -Name 'Functions' -ErrorAction SilentlyContinue).Functions
   if ($gpoFunctions) {
-    Write-Warning 'A cipher suite order is set by Group Policy at:'
-    Write-Warning "  $gpoPath"
-    Write-Warning 'That list replaces the local one, so this change would not take effect.'
-    Write-Warning 'Edit the policy instead. Keep the TLS 1.3 suites in it and put them first,'
-    Write-Warning 'because a policy list that omits them turns TLS 1.3 off.'
+    Set-Tls13GpoOrder -Existing $gpoFunctions -Suites $tls13Suites
     return
   }
 
