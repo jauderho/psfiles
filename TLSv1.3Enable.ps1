@@ -269,8 +269,17 @@ function Set-Tls13GpoOrder {
   Write-Verbose "New policy list: $newValue"
 
   if ($DryRun) {
-    Write-Output "[dryrun] Would set the policy list to $($new.Count) suites, TLS 1.3 first:"
-    Write-Output "[dryrun]   $($wanted -join ', ') then $($others.Count) existing suite(s)"
+    Write-Output "[dryrun] Would set the policy list to $($new.Count) suite(s), TLS 1.3 first:"
+    if ($Harden) {
+      # $others belongs to the reorder path and is not set here. Report the
+      # suites that remain instead of a count that is always zero.
+      foreach ($k in $new) {
+        Write-Output "[dryrun]   keep $k"
+      }
+    }
+    else {
+      Write-Output "[dryrun]   $($wanted -join ', ') then $($others.Count) existing suite(s)"
+    }
     return
   }
 
