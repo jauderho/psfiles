@@ -24,7 +24,11 @@
 
 .PARAMETER Verbose
    Emit step-level progress and the group order before and after. ON by default.
-   Turn it off with -Verbose:$false.
+   Turn it off with -Quiet.
+
+.PARAMETER Quiet
+   Turn the verbose output off. Use this rather than -Verbose:$false, which
+   does not survive the elevation relaunch.
 
 .EXAMPLE
    .\KEMEnable.ps1 -DryRun
@@ -66,13 +70,18 @@
 [CmdletBinding()]
 param(
   [switch]$Elevated,
-  [switch]$DryRun
+  [switch]$DryRun,
+  [switch]$Quiet
 )
 
 # Verbose is the default here. The group order is the point of the script and
 # the per-group detail is worth more than a quiet console. Turn it off with
-# -Verbose:$false, which the test below leaves alone because the caller named it.
-if (-not $PSBoundParameters.ContainsKey('Verbose')) {
+# -Quiet. An explicit -Verbose:$false still works in a session that is already
+# elevated, but only -Quiet survives the relaunch.
+if ($Quiet) {
+  $VerbosePreference = 'SilentlyContinue'
+}
+elseif (-not $PSBoundParameters.ContainsKey('Verbose')) {
   $VerbosePreference = 'Continue'
 }
 
@@ -94,13 +103,11 @@ if ((Test-Admin) -eq $false) {
       $relaunchArgs += ' -dryrun'
     }
 
-    # state it either way. The relaunched copy would otherwise apply its own
-    # default and undo an explicit -Verbose:$false.
-    if ($VerbosePreference -eq 'Continue') {
-      $relaunchArgs += ' -verbose'
-    }
-    else {
-      $relaunchArgs += ' -verbose:$false'
+    # -Quiet rather than -Verbose:$false. powershell -File passes each argument
+    # as a literal string, so "$false" never binds to a switch and the elevated
+    # copy would fail to start.
+    if ($VerbosePreference -ne 'Continue') {
+      $relaunchArgs += ' -quiet'
     }
 
     Start-Process powershell.exe -Verb RunAs -ArgumentList $relaunchArgs

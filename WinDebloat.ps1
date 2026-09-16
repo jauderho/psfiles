@@ -41,7 +41,11 @@
 
 .PARAMETER Verbose
    Emit step-level progress and key variable state. ON by default. Turn it off
-   with -Verbose:$false.
+   with -Quiet.
+
+.PARAMETER Quiet
+   Turn the verbose output off. Use this rather than -Verbose:$false, which
+   does not survive the elevation relaunch.
 
 .EXAMPLE
    .\WinDebloat.ps1 -DryRun
@@ -53,7 +57,7 @@
    the snapshots on disk included.
 
 .EXAMPLE
-   .\WinDebloat.ps1 -KeepRecallSnapshots -Verbose:$false
+   .\WinDebloat.ps1 -KeepRecallSnapshots -Quiet
    Apply the changes quietly but keep the Recall snapshots on disk.
 
 .EXAMPLE
@@ -115,13 +119,18 @@ param(
 	[switch]$KeepRecallSnapshots,
 	[switch]$KeepXbox,
 	[switch]$KeepOneDrive,
-	[switch]$KeepTeams
+	[switch]$KeepTeams,
+	[switch]$Quiet
 )
 
 # Verbose is the default here. The script makes a lot of changes at once, so the
 # step-level detail is worth more than a quiet console. Turn it off with
-# -Verbose:$false, which the test below leaves alone because the caller named it.
-if (-not $PSBoundParameters.ContainsKey('Verbose')) {
+# -Quiet. An explicit -Verbose:$false still works in a session that is already
+# elevated, but only -Quiet survives the relaunch.
+if ($Quiet) {
+	$VerbosePreference = 'SilentlyContinue'
+}
+elseif (-not $PSBoundParameters.ContainsKey('Verbose')) {
 	$VerbosePreference = 'Continue'
 }
 
@@ -158,14 +167,12 @@ if ((Test-Admin) -eq $false) {
 		$relaunchArgs += ' -keepteams'
 	}
 
-	# state it either way. The relaunched copy would otherwise apply its own
-	# default and undo an explicit -Verbose:$false.
-	if ($VerbosePreference -eq 'Continue') {
-		$relaunchArgs += ' -verbose'
-	}
-	else {
-		$relaunchArgs += ' -verbose:$false'
-	}
+		# -Quiet rather than -Verbose:$false. powershell -File passes each argument
+		# as a literal string, so "$false" never binds to a switch and the elevated
+		# copy would fail to start.
+		if ($VerbosePreference -ne 'Continue') {
+			$relaunchArgs += ' -quiet'
+		}
 
 	Write-Verbose "Relaunching elevated: powershell.exe $relaunchArgs"
 	Start-Process powershell.exe -Verb RunAs -ArgumentList $relaunchArgs

@@ -25,14 +25,18 @@
 
 .PARAMETER Verbose
    Emit step-level progress and the cipher order before and after. ON by
-   default. Turn it off with -Verbose:$false.
+   default. Turn it off with -Quiet.
+
+.PARAMETER Quiet
+   Turn the verbose output off. Use this rather than -Verbose:$false, which
+   does not survive the elevation relaunch.
 
 .EXAMPLE
    .\TLSv1.3Enable.ps1 -DryRun
    Report every change without making one. Always start here.
 
 .EXAMPLE
-   .\TLSv1.3Enable.ps1 -Verbose:$false
+   .\TLSv1.3Enable.ps1 -Quiet
    Apply the changes quietly.
 
 .EXAMPLE
@@ -69,13 +73,18 @@
 param(
   [switch]$Elevated,
   [switch]$DryRun,
-  [switch]$Harden
+  [switch]$Harden,
+  [switch]$Quiet
 )
 
 # Verbose is the default here. The cipher order is the point of the script and
 # the per-suite detail is worth more than a quiet console. Turn it off with
-# -Verbose:$false, which the test below leaves alone because the caller named it.
-if (-not $PSBoundParameters.ContainsKey('Verbose')) {
+# -Quiet. An explicit -Verbose:$false still works in a session that is already
+# elevated, but only -Quiet survives the relaunch.
+if ($Quiet) {
+  $VerbosePreference = 'SilentlyContinue'
+}
+elseif (-not $PSBoundParameters.ContainsKey('Verbose')) {
   $VerbosePreference = 'Continue'
 }
 
@@ -99,13 +108,11 @@ if ((Test-Admin) -eq $false) {
     if ($Harden) {
       $relaunchArgs += ' -harden'
     }
-    # state it either way. The relaunched copy would otherwise apply its own
-    # default and undo an explicit -Verbose:$false.
-    if ($VerbosePreference -eq 'Continue') {
-      $relaunchArgs += ' -verbose'
-    }
-    else {
-      $relaunchArgs += ' -verbose:$false'
+    # -Quiet rather than -Verbose:$false. powershell -File passes each argument
+    # as a literal string, so "$false" never binds to a switch and the elevated
+    # copy would fail to start.
+    if ($VerbosePreference -ne 'Continue') {
+      $relaunchArgs += ' -quiet'
     }
 
     Start-Process powershell.exe -Verb RunAs -ArgumentList $relaunchArgs
