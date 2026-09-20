@@ -82,9 +82,9 @@ function Set-NTPTiming {
    # Set the following for high accuracy
    # https://docs.microsoft.com/en-us/windows-server/networking/windows-time-service/configuring-systems-for-high-accuracy?tabs=MaxPollInterval#registry-settings
    # https://github.com/MicrosoftDocs/windowsserverdocs/issues/2065
-   Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Services\W32Time\Config" -Name "MinPollInterval" -Type DWord -Value 6
-   Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Services\W32Time\Config" -Name "MaxPollInterval" -Type DWord -Value 6
-   Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Services\W32Time\Config" -Name "UpdateInterval" -Type DWord -Value 100
+   Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Services\W32Time\Config" -Name "MinPollInterval" -Type DWord -Value 10
+   Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Services\W32Time\Config" -Name "MaxPollInterval" -Type DWord -Value 10
+   Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Services\W32Time\Config" -Name "UpdateInterval" -Type DWord -Value 15000
    Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Services\W32Time\Config" -Name "FrequencyCorrectRate" -Type DWord -Value 2
    #Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Services\W32Time\TimeProviders\NtpClient" -Name "SpecialPollInterval" -Type DWord -Value 64
 
