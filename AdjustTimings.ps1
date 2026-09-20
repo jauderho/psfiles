@@ -49,9 +49,11 @@ function Set-NTPTiming {
 
    # Define the list of NTP servers to be used. Adjust as necessary. Try to use at least 4 servers.
    $ntpservers = "aion.carumba.org,0x9 balrog.carumba.org,0x9 etu.carumba.org,0x9 time.cloudflare.com,0x9 0.pool.ntp.org,0x9 1.pool.ntp.org,0x9 2.pool.ntp.org,0x9"
-   #$ntpservers = "balrog.carumba.org,0x1 time.cloudflare.com,0x1 0.pool.ntp.org,0x1 1.pool.ntp.org,0x1 2.pool.ntp.org,0x1 3.pool.ntp.org,0x1"
 
-   $IsVirtual = ((Get-CimInstance win32_computersystem).model -eq 'VMware Virtual Platform' -or ((Get-CimInstance win32_computersystem).model -eq 'Virtual Machine'))
+   #$IsVirtual = (Get-CimInstance Win32_ComputerSystem).Model -like 'VMware*'
+   $cs = Get-CimInstance Win32_ComputerSystem
+   $IsVirtual = $cs.HypervisorPresent -or ($cs.Model -match 'VMware|Virtual Machine|VirtualBox|KVM|Xen|HVM')
+   #$IsVirtual = ((Get-CimInstance win32_computersystem).model -eq 'VMware Virtual Platform' -or ((Get-CimInstance win32_computersystem).model -eq 'Virtual Machine'))
 
    # Force clock resync every hour (3600s)
    # VMware recommends a resync every 15 mins for VMs (900s)
@@ -63,8 +65,8 @@ function Set-NTPTiming {
    }
    # Get-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\services\W32Time\TimeProviders\NtpClient" -Name "SpecialPollInterval"
 
-   # If 0x5 does not work, try using 0xA
-   #Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\services\W32Time\Config" -Name "AnnounceFlags" -Type DWord -Value 0x5
+   # 0xA is the default but 0x0 means never be a NTP server
+   #Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\services\W32Time\Config" -Name "AnnounceFlags" -Type DWord -Value 0x0
 
    # 0x9 is a combination of 0x1 (Use SpecialPollInterval) and 0x8 (act as client)
    # Currently using time.cloudflare.com. Change this as necessary
@@ -85,6 +87,9 @@ function Set-NTPTiming {
    Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Services\W32Time\Config" -Name "UpdateInterval" -Type DWord -Value 100
    Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Services\W32Time\Config" -Name "FrequencyCorrectRate" -Type DWord -Value 2
    #Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Services\W32Time\TimeProviders\NtpClient" -Name "SpecialPollInterval" -Type DWord -Value 64
+
+   # Disable VMICTimeProvider (Hyper-V)
+   Set-ItemProperty 'HKLM:\SYSTEM\CurrentControlSet\Services\W32Time\TimeProviders\VMICTimeProvider' -Name Enabled -Value 0
 
    # w32tm /config /syncfromflags:manual /manualpeerlist:"balrog.carumba.org,0x9 time.cloudflare.com,0x9 0.pool.ntp.org,0x9 1.pool.ntp.org,0x9 2.pool.ntp.org,0x9 3.pool.ntp.org,0x9" /update
    # w32tm /config /syncfromflags:manual /manualpeerlist:"0.pool.ntp.org,0x9 1.pool.ntp.org,0x9 2.pool.ntp.org,0x9 3.pool.ntp.org,0x9" /update
