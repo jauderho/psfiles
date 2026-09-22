@@ -4,4 +4,9 @@
 [![GitHub Super-Linter](https://github.com/jauderho/psfiles/workflows/Lint%20Code%20Base/badge.svg)](https://github.com/jauderho/psfiles/actions/workflows/linter.yml)
 [![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/jauderho/psfiles/badge)](https://securityscorecards.dev/viewer/?uri=github.com/jauderho/psfiles)
 
+## Windows Cleanup
+- Dism1726Repair.ps1 
+- SoftwareDistributionCleanup.ps1 (DryRun then Execute)
+- ComponentCleanup.ps1 (DryRun then Execute)
+
 Personal PowerShell repository
